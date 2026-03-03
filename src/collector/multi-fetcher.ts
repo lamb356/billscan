@@ -1,116 +1,124 @@
 import { mkdirSync, existsSync, createWriteStream } from 'node:fs';
-import { join } from 'node:path';
+import { resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import AdmZip from 'adm-zip';
 
-const DATA_DIR = join(process.cwd(), 'data');
-
-// CLFS URLs (Clinical Lab Fee Schedule)
-const CLFS_URLS: Record<number, string> = {
-  2026: 'https://www.cms.gov/files/zip/cy-2026-clfs-payment-rate-information.zip',
-  2025: 'https://www.cms.gov/files/zip/cy-2025-clfs-payment-rate-information.zip',
-  2024: 'https://www.cms.gov/files/zip/cy-2024-clfs-payment-rate-information.zip',
-};
-
-// ASP URLs (Average Sales Price - Part B drug pricing)
-const ASP_URLS: Record<number, string> = {
-  2026: 'https://www.cms.gov/files/zip/2026-asp-drug-pricing-files.zip',
-  2025: 'https://www.cms.gov/files/zip/2025-asp-drug-pricing-files.zip',
-  2024: 'https://www.cms.gov/files/zip/2024-asp-drug-pricing-files.zip',
-};
-
-// OPPS URLs (Outpatient PPS / APC)
-const OPPS_URLS: Record<number, string> = {
-  2026: 'https://www.cms.gov/files/zip/2026-opps-addendum-b.zip',
-  2025: 'https://www.cms.gov/files/zip/2025-opps-addendum-b.zip',
-  2024: 'https://www.cms.gov/files/zip/2024-opps-addendum-b.zip',
-};
-
-export interface MultiFetchResult {
+interface FetchResult {
   csvPath: string;
   sourceUrl: string;
   fileName: string;
 }
 
-const FETCH_CONFIGS = {
-  clfs: { urlMap: CLFS_URLS, prefix: 'cms-clfs' },
-  asp: { urlMap: ASP_URLS, prefix: 'cms-asp' },
-  opps: { urlMap: OPPS_URLS, prefix: 'cms-opps' },
-};
+const CLFS_URL_PATTERNS = [
+  'https://www.cms.gov/files/zip/26clabq1.zip',
+  'https://www.cms.gov/files/zip/{YY}clabq1.zip',
+];
 
-async function fetchCmsSource(
-  type: keyof typeof FETCH_CONFIGS,
-  year: number,
-  forceRefresh = false,
-): Promise<MultiFetchResult> {
-  const { urlMap, prefix } = FETCH_CONFIGS[type];
-  const sourceUrl = urlMap[year];
+const ASP_URL_PATTERNS = [
+  'https://www.cms.gov/files/zip/january-{YEAR}-medicare-part-b-payment-limit-files.zip',
+  'https://www.cms.gov/files/zip/april-{YEAR}-medicare-part-b-payment-limit-files.zip',
+];
 
-  if (!sourceUrl) {
-    throw new Error(`No ${type.toUpperCase()} URL configured for year ${year}`);
+const OPPS_URL_PATTERNS = [
+  'https://www.cms.gov/files/zip/january-{YEAR}-opps-addendum-b.zip',
+  'https://www.cms.gov/files/zip/april-{YEAR}-opps-addendum-b.zip',
+];
+
+async function downloadAndExtract(
+  urls: string[],
+  label: string,
+  downloadDir: string,
+  localName: string,
+  forceRefresh: boolean,
+  csvPicker: (entries: string[]) => string | null,
+): Promise<FetchResult> {
+  mkdirSync(downloadDir, { recursive: true });
+  const zipPath = resolve(downloadDir, `${localName}.zip`);
+
+  if (!forceRefresh && existsSync(zipPath)) {
+    console.log(`[${label}] Using cached ZIP: ${zipPath}`);
+    const csvPath = extractBestCsv(zipPath, downloadDir, csvPicker);
+    return { csvPath, sourceUrl: 'cached', fileName: csvPath.split('/').pop()! };
   }
 
-  mkdirSync(DATA_DIR, { recursive: true });
-
-  const fileName = `${prefix}-${year}.csv`;
-  const csvPath = join(DATA_DIR, fileName);
-  const zipPath = join(DATA_DIR, `${prefix}-${year}.zip`);
-
-  // Return cached if available
-  if (!forceRefresh && existsSync(csvPath)) {
-    console.log(`[${type}-fetcher] Using cached CSV: ${csvPath}`);
-    return { csvPath, sourceUrl, fileName };
+  for (const url of urls) {
+    console.log(`[${label}] Trying: ${url}`);
+    try {
+      const response = await fetch(url, {
+        redirect: 'follow',
+        headers: { 'User-Agent': 'BillScan/0.2.0 (medical-bill-auditor)' },
+      });
+      if (!response.ok) { console.log(`[${label}] ${response.status} from ${url}`); continue; }
+      if (response.body) {
+        const fileStream = createWriteStream(zipPath);
+        await pipeline(Readable.fromWeb(response.body as any), fileStream);
+        try { new AdmZip(zipPath); } catch { console.log(`[${label}] Invalid ZIP from ${url}`); continue; }
+        const csvPath = extractBestCsv(zipPath, downloadDir, csvPicker);
+        console.log(`[${label}] Downloaded from ${url}`);
+        return { csvPath, sourceUrl: url, fileName: csvPath.split('/').pop()! };
+      }
+    } catch (err) {
+      console.log(`[${label}] Error: ${(err as Error).message}`);
+      continue;
+    }
   }
 
-  // Download ZIP
-  console.log(`[${type}-fetcher] Downloading ${sourceUrl}...`);
-  const response = await fetch(sourceUrl);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText} from ${sourceUrl}`);
-  }
-
-  const writer = createWriteStream(zipPath);
-  await pipeline(Readable.fromWeb(response.body as any), writer);
-  console.log(`[${type}-fetcher] Downloaded to ${zipPath}`);
-
-  // Extract CSV from ZIP
-  await extractCsvFromZip(zipPath, csvPath, type);
-  console.log(`[${type}-fetcher] Extracted CSV to ${csvPath}`);
-
-  return { csvPath, sourceUrl, fileName };
+  throw new Error(`[${label}] Could not download from any URL`);
 }
 
-export const fetchClfsData = (year: number, forceRefresh = false) =>
-  fetchCmsSource('clfs', year, forceRefresh);
+function extractBestCsv(
+  zipPath: string,
+  outputDir: string,
+  csvPicker: (entries: string[]) => string | null,
+): string {
+  const zip = new AdmZip(zipPath);
+  const entries = zip.getEntries();
+  const names = entries.filter(e => !e.isDirectory).map(e => e.entryName);
 
-export const fetchAspData = (year: number, forceRefresh = false) =>
-  fetchCmsSource('asp', year, forceRefresh);
-
-export const fetchOppsData = (year: number, forceRefresh = false) =>
-  fetchCmsSource('opps', year, forceRefresh);
-
-async function extractCsvFromZip(zipPath: string, csvPath: string, type: string): Promise<void> {
-  const { execSync } = await import('node:child_process');
-  const { readdirSync, renameSync, unlinkSync } = await import('node:fs');
-  const { join: pathJoin, extname } = await import('node:path');
-
-  const tmpDir = zipPath + '_extracted';
-  mkdirSync(tmpDir, { recursive: true });
-
-  execSync(`unzip -o "${zipPath}" -d "${tmpDir}"`, { stdio: 'pipe' });
-
-  // Find CSV file
-  const files = readdirSync(tmpDir);
-  const csvFile = files.find(f => extname(f).toLowerCase() === '.csv');
-
-  if (!csvFile) {
-    throw new Error(`[${type}-fetcher] No CSV found in ZIP. Files: ${files.join(', ')}`);
+  const chosen = csvPicker(names);
+  if (!chosen) {
+    const textFiles = entries
+      .filter(e => !e.isDirectory && (/\.csv$/i.test(e.entryName) || /\.txt$/i.test(e.entryName)))
+      .sort((a, b) => b.header.size - a.header.size);
+    if (textFiles.length === 0) throw new Error(`No CSV/TXT in ${zipPath}`);
+    const target = textFiles[0];
+    const outPath = resolve(outputDir, target.entryName.split('/').pop()!);
+    zip.extractEntryTo(target, outputDir, false, true);
+    return outPath;
   }
 
-  renameSync(pathJoin(tmpDir, csvFile), csvPath);
+  const entry = entries.find(e => e.entryName === chosen);
+  if (!entry) throw new Error(`Entry ${chosen} not found in ${zipPath}`);
+  const outName = chosen.split('/').pop()!;
+  const outPath = resolve(outputDir, outName);
+  zip.extractEntryTo(entry, outputDir, false, true);
+  return outPath;
+}
 
-  try {
-    execSync(`rm -rf "${tmpDir}"`, { stdio: 'pipe' });
-    unlinkSync(zipPath);
-  } catch { /* cleanup is best-effort */ }
+export async function fetchClfsData(year: number, forceRefresh = false): Promise<FetchResult> {
+  const yy = String(year).slice(-2);
+  const urls = CLFS_URL_PATTERNS.map(u => u.replace('{YY}', yy).replace('{YEAR}', String(year)));
+  const downloadDir = resolve(process.cwd(), 'data', 'cms-downloads');
+  return downloadAndExtract(urls, 'clfs-fetcher', downloadDir, `clfs-${year}`, forceRefresh, (entries) => {
+    return entries.find(e => /\.csv$/i.test(e)) || null;
+  });
+}
+
+export async function fetchAspData(year: number, forceRefresh = false): Promise<FetchResult> {
+  const urls = ASP_URL_PATTERNS.map(u => u.replace('{YEAR}', String(year)));
+  const downloadDir = resolve(process.cwd(), 'data', 'cms-downloads');
+  return downloadAndExtract(urls, 'asp-fetcher', downloadDir, `asp-${year}`, forceRefresh, (entries) => {
+    return entries.find(e => /508.*\.csv$/i.test(e) || /\.csv$/i.test(e)) || null;
+  });
+}
+
+export async function fetchOppsData(year: number, forceRefresh = false): Promise<FetchResult> {
+  const urls = OPPS_URL_PATTERNS.map(u => u.replace('{YEAR}', String(year)));
+  const downloadDir = resolve(process.cwd(), 'data', 'cms-downloads');
+  return downloadAndExtract(urls, 'opps-fetcher', downloadDir, `opps-${year}`, forceRefresh, (entries) => {
+    return entries.find(e => /508.*\.csv$/i.test(e)) ||
+           entries.find(e => /addendum.*b.*\.csv$/i.test(e)) ||
+           entries.find(e => /\.csv$/i.test(e)) || null;
+  });
 }
