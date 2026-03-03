@@ -17,14 +17,19 @@ import { getAggregateStats, formatStats } from './output/stats.js';
 import { generateDisputeLetter } from './dispute/letter-generator.js';
 import { generatePhoneScript } from './dispute/phone-script.js';
 import { closeDb } from './db/connection.js';
+import { runMigrations } from './db/migrations.js';
 import { basename } from 'node:path';
 
 const program = new Command();
 
 program
   .name('billscan')
-  .description('AI Medical Bill Auditor - Compare bills against real CMS Medicare rates')
+  .description('AI Medical Bill Auditor — Compare bills against real CMS Medicare rates')
   .version('0.2.0');
+
+async function ensureDb() {
+  await runMigrations();
+}
 
 program
   .command('fetch-cms')
@@ -33,15 +38,20 @@ program
   .option('--refresh', 'Force re-download even if cached', false)
   .action(async (opts) => {
     try {
+      await ensureDb();
       const year = parseInt(opts.year);
       console.log(`\n=== BillScan CMS PFS Fetcher ===`);
       console.log(`Year: ${year} | Refresh: ${opts.refresh}\n`);
+
       const { csvPath, sourceUrl } = await fetchCmsData(year, opts.refresh);
       const { rates, rawHash } = await parseCmsCsv(csvPath, year);
-      const { snapshotId, rowCount, cached } = importCmsRates(rates, sourceUrl, year, rawHash, basename(csvPath), opts.refresh);
-      console.log(`\n[OK] PFS - ${rowCount} rates imported (snapshot #${snapshotId}, cached: ${cached})`);
+      const { snapshotId, rowCount, cached } = await importCmsRates(
+        rates, sourceUrl, year, rawHash, basename(csvPath), opts.refresh
+      );
+
+      console.log(`\n✅ PFS — ${rowCount} rates imported (snapshot #${snapshotId}, cached: ${cached})`);
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
       process.exit(1);
     } finally {
       closeDb();
@@ -55,15 +65,18 @@ program
   .option('--refresh', 'Force re-download even if cached', false)
   .action(async (opts) => {
     try {
+      await ensureDb();
       const year = parseInt(opts.year);
       console.log(`\n=== BillScan CMS CLFS Fetcher ===`);
       console.log(`Year: ${year} | Refresh: ${opts.refresh}\n`);
+
       const { csvPath, sourceUrl, fileName } = await fetchClfsData(year, opts.refresh);
       const { rates, rawHash } = await parseClfsCsv(csvPath, year);
-      const { snapshotId, rowCount, cached } = importClfsRates(rates, sourceUrl, year, rawHash, fileName);
-      console.log(`\n[OK] CLFS - ${rowCount} lab rates imported (snapshot #${snapshotId}, cached: ${cached})`);
+      const { snapshotId, rowCount, cached } = await importClfsRates(rates, sourceUrl, year, rawHash, fileName);
+
+      console.log(`\n✅ CLFS — ${rowCount} lab rates imported (snapshot #${snapshotId}, cached: ${cached})`);
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
       process.exit(1);
     } finally {
       closeDb();
@@ -77,15 +90,18 @@ program
   .option('--refresh', 'Force re-download even if cached', false)
   .action(async (opts) => {
     try {
+      await ensureDb();
       const year = parseInt(opts.year);
       console.log(`\n=== BillScan CMS ASP Fetcher ===`);
       console.log(`Year: ${year} | Refresh: ${opts.refresh}\n`);
+
       const { csvPath, sourceUrl, fileName } = await fetchAspData(year, opts.refresh);
       const { rates, rawHash } = await parseAspCsv(csvPath, year);
-      const { snapshotId, rowCount, cached } = importAspRates(rates, sourceUrl, year, rawHash, fileName);
-      console.log(`\n[OK] ASP - ${rowCount} drug rates imported (snapshot #${snapshotId}, cached: ${cached})`);
+      const { snapshotId, rowCount, cached } = await importAspRates(rates, sourceUrl, year, rawHash, fileName);
+
+      console.log(`\n✅ ASP — ${rowCount} drug rates imported (snapshot #${snapshotId}, cached: ${cached})`);
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
       process.exit(1);
     } finally {
       closeDb();
@@ -99,15 +115,18 @@ program
   .option('--refresh', 'Force re-download even if cached', false)
   .action(async (opts) => {
     try {
+      await ensureDb();
       const year = parseInt(opts.year);
       console.log(`\n=== BillScan CMS OPPS Fetcher ===`);
       console.log(`Year: ${year} | Refresh: ${opts.refresh}\n`);
+
       const { csvPath, sourceUrl, fileName } = await fetchOppsData(year, opts.refresh);
       const { rates, rawHash } = await parseOppsCsv(csvPath, year);
-      const { snapshotId, rowCount, cached } = importOppsRates(rates, sourceUrl, year, rawHash, fileName);
-      console.log(`\n[OK] OPPS - ${rowCount} APC rates imported (snapshot #${snapshotId}, cached: ${cached})`);
+      const { snapshotId, rowCount, cached } = await importOppsRates(rates, sourceUrl, year, rawHash, fileName);
+
+      console.log(`\n✅ OPPS — ${rowCount} APC rates imported (snapshot #${snapshotId}, cached: ${cached})`);
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
       process.exit(1);
     } finally {
       closeDb();
@@ -121,53 +140,72 @@ program
   .option('--refresh', 'Force re-download even if cached', false)
   .action(async (opts) => {
     try {
+      await ensureDb();
       const year = parseInt(opts.year);
-      console.log(`\n=== BillScan - Fetch ALL CMS Data Sources ===`);
-      console.log(`Year: ${year} | Refresh: ${opts.refresh}\n`);
+      console.log(`\n════════════════════════════════════════════`);
+      console.log(`  BillScan — Fetch ALL CMS Data Sources`);
+      console.log(`  Year: ${year} | Refresh: ${opts.refresh}`);
+      console.log(`════════════════════════════════════════════\n`);
 
-      console.log(`\n--- [1/6] Physician Fee Schedule (PFS) ---`);
+      // 1. PFS
+      console.log(`\n─── [1/6] Physician Fee Schedule (PFS) ───`);
       try {
         const { csvPath, sourceUrl } = await fetchCmsData(year, opts.refresh);
         const { rates, rawHash } = await parseCmsCsv(csvPath, year);
-        const { rowCount, cached } = importCmsRates(rates, sourceUrl, year, rawHash, basename(csvPath), opts.refresh);
-        console.log(`[OK] PFS: ${rowCount} rates (cached: ${cached})`);
-      } catch (err) { console.error(`[WARN] PFS failed: ${(err as Error).message}`); }
+        const { rowCount, cached } = await importCmsRates(rates, sourceUrl, year, rawHash, basename(csvPath), opts.refresh);
+        console.log(`✅ PFS: ${rowCount} rates (cached: ${cached})`);
+      } catch (err) {
+        console.error(`⚠️  PFS failed: ${(err as Error).message}`);
+      }
 
-      console.log(`\n--- [2/6] Clinical Lab Fee Schedule (CLFS) ---`);
+      // 2. CLFS
+      console.log(`\n─── [2/6] Clinical Lab Fee Schedule (CLFS) ───`);
       try {
         const { csvPath, sourceUrl, fileName } = await fetchClfsData(year, opts.refresh);
         const { rates, rawHash } = await parseClfsCsv(csvPath, year);
-        const { rowCount, cached } = importClfsRates(rates, sourceUrl, year, rawHash, fileName);
-        console.log(`[OK] CLFS: ${rowCount} lab rates (cached: ${cached})`);
-      } catch (err) { console.error(`[WARN] CLFS failed: ${(err as Error).message}`); }
+        const { rowCount, cached } = await importClfsRates(rates, sourceUrl, year, rawHash, fileName);
+        console.log(`✅ CLFS: ${rowCount} lab rates (cached: ${cached})`);
+      } catch (err) {
+        console.error(`⚠️  CLFS failed: ${(err as Error).message}`);
+      }
 
-      console.log(`\n--- [3/6] Drug Average Sales Price (ASP) ---`);
+      // 3. ASP
+      console.log(`\n─── [3/6] Drug Average Sales Price (ASP) ───`);
       try {
         const { csvPath, sourceUrl, fileName } = await fetchAspData(year, opts.refresh);
         const { rates, rawHash } = await parseAspCsv(csvPath, year);
-        const { rowCount, cached } = importAspRates(rates, sourceUrl, year, rawHash, fileName);
-        console.log(`[OK] ASP: ${rowCount} drug rates (cached: ${cached})`);
-      } catch (err) { console.error(`[WARN] ASP failed: ${(err as Error).message}`); }
+        const { rowCount, cached } = await importAspRates(rates, sourceUrl, year, rawHash, fileName);
+        console.log(`✅ ASP: ${rowCount} drug rates (cached: ${cached})`);
+      } catch (err) {
+        console.error(`⚠️  ASP failed: ${(err as Error).message}`);
+      }
 
-      console.log(`\n--- [4/6] Outpatient PPS / APC (OPPS) ---`);
+      // 4. OPPS
+      console.log(`\n─── [4/6] Outpatient PPS / APC (OPPS) ───`);
       try {
         const { csvPath, sourceUrl, fileName } = await fetchOppsData(year, opts.refresh);
         const { rates, rawHash } = await parseOppsCsv(csvPath, year);
-        const { rowCount, cached } = importOppsRates(rates, sourceUrl, year, rawHash, fileName);
-        console.log(`[OK] OPPS: ${rowCount} APC rates (cached: ${cached})`);
-      } catch (err) { console.error(`[WARN] OPPS failed: ${(err as Error).message}`); }
+        const { rowCount, cached } = await importOppsRates(rates, sourceUrl, year, rawHash, fileName);
+        console.log(`✅ OPPS: ${rowCount} APC rates (cached: ${cached})`);
+      } catch (err) {
+        console.error(`⚠️  OPPS failed: ${(err as Error).message}`);
+      }
 
-      console.log(`\n--- [5/6] ZIP-to-Locality Mapping ---`);
-      seedZipLocality();
-      console.log(`[OK] ZIP locality data seeded`);
+      // 5. ZIP locality
+      console.log(`\n─── [5/6] ZIP-to-Locality Mapping ───`);
+      await seedZipLocality();
+      console.log(`✅ ZIP locality data seeded`);
 
-      console.log(`\n--- [6/6] Charity Care Database ---`);
-      seedCharityHospitals();
-      console.log(`[OK] Charity hospital data seeded`);
+      // 6. Charity hospitals
+      console.log(`\n─── [6/6] Charity Care Database ───`);
+      await seedCharityHospitals();
+      console.log(`✅ Charity hospital data seeded`);
 
-      console.log(`\n=== All data sources loaded for ${year} ===\n`);
+      console.log(`\n════════════════════════════════════════════`);
+      console.log(`  ✅ All data sources loaded for ${year}`);
+      console.log(`════════════════════════════════════════════\n`);
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
       process.exit(1);
     } finally {
       closeDb();
@@ -190,55 +228,99 @@ program
   .option('--plan <type>', 'Estimate insurance rates without EOB: hmo | ppo | oon')
   .action(async (file, opts) => {
     try {
+      await ensureDb();
       const auditOpts: any = { save: opts.save };
-      if (opts.setting === 'facility' || opts.setting === 'office') auditOpts.setting = opts.setting;
-      if (opts.locality) auditOpts.locality = opts.locality;
-      if (opts.zip) auditOpts.zip = opts.zip;
+      if (opts.setting === 'facility' || opts.setting === 'office') {
+        auditOpts.setting = opts.setting;
+      }
+      if (opts.locality) {
+        auditOpts.locality = opts.locality;
+      }
+      if (opts.zip) {
+        auditOpts.zip = opts.zip;
+      }
 
+      // Determine if we need EOB/insurance comparison mode
       const useInsuranceMode = !!(opts.eob || opts.plan);
 
       if (useInsuranceMode) {
+        // Validate --plan value
         if (opts.plan && !['hmo', 'ppo', 'oon'].includes(opts.plan)) {
-          console.error(`\n[ERR] Invalid --plan value "${opts.plan}". Must be: hmo, ppo, or oon`);
+          console.error(`\n❌ Invalid --plan value "${opts.plan}". Must be: hmo, ppo, or oon`);
           process.exit(1);
         }
+
         const eobOpts = {
           ...auditOpts,
           ...(opts.eob ? { eobPath: opts.eob } : {}),
           ...(opts.plan ? { plan: opts.plan as 'hmo' | 'ppo' | 'oon' } : {}),
         };
+
         const eobReport = await runEobAudit(file, eobOpts);
+
         if (opts.json) {
           console.log(JSON.stringify(eobReport, null, 2));
         } else {
           console.log('\n' + formatEobAuditConsole(eobReport));
         }
-        if (opts.cards) console.log('\n' + renderViralCard(eobReport.baseReport));
+
+        // Cards use the base report
+        if (opts.cards) {
+          console.log('\n' + renderViralCard(eobReport.baseReport));
+        }
+
         if (opts.charity && eobReport.baseReport.facilityName) {
           console.log('\n=== CHARITY CARE CHECK ===\n');
-          const charityResult = checkCharityCare(eobReport.baseReport.facilityName);
-          for (const line of charityResult.advice) console.log(`  ${line}`);
+          const charityResult = await checkCharityCare(eobReport.baseReport.facilityName);
+          for (const line of charityResult.advice) {
+            console.log(`  ${line}`);
+          }
         }
-        if (opts.letter) { console.log('\n=== DISPUTE LETTER ===\n'); console.log(generateDisputeLetter(eobReport.baseReport)); }
-        if (opts.phone) { console.log('\n=== PHONE SCRIPT ===\n'); console.log(generatePhoneScript(eobReport.baseReport)); }
+
+        if (opts.letter) {
+          console.log('\n=== DISPUTE LETTER ===\n');
+          console.log(generateDisputeLetter(eobReport.baseReport));
+        }
+
+        if (opts.phone) {
+          console.log('\n=== PHONE SCRIPT ===\n');
+          console.log(generatePhoneScript(eobReport.baseReport));
+        }
+
       } else {
+        // Standard audit (no insurance comparison)
         const report = await runAudit(file, auditOpts);
+
         if (opts.json) {
           console.log(JSON.stringify(report, null, 2));
         } else {
           console.log('\n' + formatReportConsole(report));
         }
-        if (opts.cards) console.log('\n' + renderViralCard(report));
+
+        if (opts.cards) {
+          console.log('\n' + renderViralCard(report));
+        }
+
         if (opts.charity && report.facilityName) {
           console.log('\n=== CHARITY CARE CHECK ===\n');
-          const charityResult = checkCharityCare(report.facilityName);
-          for (const line of charityResult.advice) console.log(`  ${line}`);
+          const charityResult = await checkCharityCare(report.facilityName);
+          for (const line of charityResult.advice) {
+            console.log(`  ${line}`);
+          }
         }
-        if (opts.letter) { console.log('\n=== DISPUTE LETTER ===\n'); console.log(generateDisputeLetter(report)); }
-        if (opts.phone) { console.log('\n=== PHONE SCRIPT ===\n'); console.log(generatePhoneScript(report)); }
+
+        if (opts.letter) {
+          console.log('\n=== DISPUTE LETTER ===\n');
+          console.log(generateDisputeLetter(report));
+        }
+
+        if (opts.phone) {
+          console.log('\n=== PHONE SCRIPT ===\n');
+          console.log(generatePhoneScript(report));
+        }
       }
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
       process.exit(1);
     } finally {
       closeDb();
@@ -248,12 +330,13 @@ program
 program
   .command('stats')
   .description('Show aggregate audit statistics')
-  .action(() => {
+  .action(async () => {
     try {
-      const stats = getAggregateStats();
+      await ensureDb();
+      const stats = await getAggregateStats();
       console.log('\n' + formatStats(stats));
     } catch (err) {
-      console.error(`\n[ERR] ${(err as Error).message}`);
+      console.error(`\n❌ ${(err as Error).message}`);
     } finally {
       closeDb();
     }

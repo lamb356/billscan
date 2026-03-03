@@ -32,7 +32,7 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
   // 3. Resolve locality from ZIP if provided
   let locality = options.locality || undefined;
   if (!locality && options.zip) {
-    locality = resolveZipLocality(options.zip) || undefined;
+    locality = await resolveZipLocality(options.zip) || undefined;
     if (locality) {
       console.log(`[audit] Resolved ZIP ${options.zip} → locality ${locality}`);
     }
@@ -40,22 +40,23 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
 
   // 4. Get snapshot info
   const db = getDb();
-  const snapshot = db.prepare(
-    'SELECT id, source_url, effective_year, data_hash FROM cms_snapshots ORDER BY effective_year DESC, fetched_at DESC LIMIT 1'
-  ).get() as { id: number; source_url: string; effective_year: number; data_hash: string } | undefined;
+  const snapshot = (await db.execute({
+    sql: 'SELECT id, source_url, effective_year, data_hash FROM cms_snapshots ORDER BY effective_year DESC, fetched_at DESC LIMIT 1',
+    args: [],
+  })).rows[0] as { id: number; source_url: string; effective_year: number; data_hash: string } | undefined;
 
   if (!snapshot) {
     throw new Error('No CMS data found. Run `billscan fetch-all` first.');
   }
 
   // 5. Check available data sources
-  const dataSources = getAvailableDataSources(db);
+  const dataSources = await getAvailableDataSources(db);
 
   // 6. Match each line item using multi-source matcher
   const findings: AuditFinding[] = [];
 
   for (const item of bill.lineItems) {
-    const match = matchRateMulti(
+    const match = await matchRateMulti(
       item.cptCode,
       item.modifier,
       rateContext,
@@ -169,45 +170,49 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
 
   // 11. Save if requested
   if (options.save) {
-    db.prepare(`
-      INSERT INTO audits (report_id, input_hash, snapshot_id, total_billed, total_cms, total_savings, finding_count, report_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      reportId,
-      inputHash,
-      snapshot.id,
-      bill.totalBilled,
-      totalCmsBaseline,
-      totalPotentialSavings,
-      findings.length,
-      JSON.stringify(report),
-    );
+    await db.execute({
+      sql: `
+        INSERT INTO audits (report_id, input_hash, snapshot_id, total_billed, total_cms, total_savings, finding_count, report_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        reportId,
+        inputHash,
+        snapshot.id,
+        bill.totalBilled,
+        totalCmsBaseline,
+        totalPotentialSavings,
+        findings.length,
+        JSON.stringify(report),
+      ],
+    });
     console.log(`[audit] Saved to database: ${reportId}`);
   }
 
   return report;
 }
 
-function resolveZipLocality(zip: string): string | null {
+async function resolveZipLocality(zip: string): Promise<string | null> {
   const db = getDb();
-  const row = db.prepare(
-    'SELECT locality FROM zip_locality WHERE zip_code = ?'
-  ).get(zip) as { locality: string } | undefined;
+  const row = (await db.execute({
+    sql: 'SELECT locality FROM zip_locality WHERE zip_code = ?',
+    args: [zip],
+  })).rows[0] as { locality: string } | undefined;
   return row?.locality || null;
 }
 
-function getAvailableDataSources(db: ReturnType<typeof getDb>): string[] {
+async function getAvailableDataSources(db: ReturnType<typeof getDb>): Promise<string[]> {
   const sources: string[] = ['PFS'];
   try {
-    const clfs = db.prepare('SELECT COUNT(*) as c FROM clfs_rates').get() as { c: number };
+    const clfs = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM clfs_rates', args: [] })).rows[0] as { c: number };
     if (clfs.c > 0) sources.push('CLFS');
   } catch { /* table may not exist yet */ }
   try {
-    const asp = db.prepare('SELECT COUNT(*) as c FROM asp_rates').get() as { c: number };
+    const asp = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM asp_rates', args: [] })).rows[0] as { c: number };
     if (asp.c > 0) sources.push('ASP');
   } catch { /* table may not exist yet */ }
   try {
-    const opps = db.prepare('SELECT COUNT(*) as c FROM opps_rates').get() as { c: number };
+    const opps = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM opps_rates', args: [] })).rows[0] as { c: number };
     if (opps.c > 0) sources.push('OPPS');
   } catch { /* table may not exist yet */ }
   return sources;

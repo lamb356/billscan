@@ -176,3 +176,98 @@ GitHub Actions runs on every push/PR:
 ## License
 
 MIT
+
+## Production Deployment
+
+### Prerequisites
+- [Turso](https://turso.tech) account (free tier — 9GB)
+- [Vercel](https://vercel.com) account (free tier)
+- [Stripe](https://stripe.com) account (test mode first)
+- Google Cloud Console OAuth credentials
+- GitHub OAuth App credentials
+
+### 1. Set Up Turso Database
+```bash
+# Install Turso CLI
+curl -sSfL https://get.tur.so/install.sh | bash
+
+# Create database
+turso db create billscan
+
+# Get credentials
+turso db show billscan --url
+turso db tokens create billscan
+```
+
+### 2. Seed Turso with CMS Data
+```bash
+TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... npx tsx scripts/seed-turso.ts
+```
+This copies 1,057,383 CMS rates + 42,956 ZIP codes + 6,121 charity hospitals from local SQLite to Turso.
+
+### 3. Configure OAuth Providers
+
+**Google:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create OAuth 2.0 Client ID
+3. Add redirect URI: `https://billscan.vercel.app/api/auth/callback/google`
+
+**GitHub:**
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. New OAuth App
+3. Callback URL: `https://billscan.vercel.app/api/auth/callback/github`
+
+### 4. Set Up Stripe
+1. Create product "BillScan Pro" at $9.99/month in [Stripe Dashboard](https://dashboard.stripe.com)
+2. Get the Price ID (starts with `price_`)
+3. Set up webhook endpoint: `https://billscan.vercel.app/api/stripe/webhook`
+4. Listen for: `checkout.session.completed`, `customer.subscription.deleted`, `customer.subscription.updated`
+
+### 5. Deploy to Vercel
+1. Import `lamb356/billscan` at [vercel.com/new](https://vercel.com/new)
+2. Set Root Directory to `web`
+3. Add all environment variables from `.env.example`
+4. Deploy
+
+### Environment Variables
+See `.env.example` for the complete list.
+
+### Architecture
+```
+┌─────────────────────────────────────────┐
+│  Vercel (Next.js App)                   │
+│  ├── Landing page (/)                   │
+│  ├── Login (/login) — NextAuth          │
+│  ├── Audit (/audit) — upload + results  │
+│  ├── Pricing (/pricing) — Stripe        │
+│  └── API Routes                         │
+│      ├── /api/auth — NextAuth           │
+│      ├── /api/audit — bill analysis     │
+│      ├── /api/stripe — billing          │
+│      └── /api/health — status           │
+└─────────┬───────────────────────────────┘
+          │
+          ▼
+┌─────────────────────┐
+│  Turso (SQLite)     │
+│  ├── 1M+ CMS rates  │
+│  ├── 42K ZIP codes   │
+│  ├── 6K hospitals    │
+│  ├── User accounts   │
+│  └── Audit history   │
+└─────────────────────┘
+```
+
+### Pricing Model
+| Feature | Free | Pro ($9.99/mo) |
+|---------|------|----------------|
+| Bill audits | 3/month | Unlimited |
+| CMS rate comparison | ✓ | ✓ |
+| Overcharge detection | ✓ | ✓ |
+| Charity care checker | ✓ | ✓ |
+| EOB comparison | — | ✓ |
+| Insurance estimates | — | ✓ |
+| Dispute letter | — | ✓ |
+| Phone script | — | ✓ |
+| PDF export | — | ✓ |
+| Geographic matching | — | ✓ |

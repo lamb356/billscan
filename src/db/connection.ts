@@ -1,24 +1,29 @@
-import Database from 'better-sqlite3';
-import { mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { runMigrations } from './migrations.js';
+import { createClient, type Client } from '@libsql/client';
 
-const DB_PATH = resolve(process.cwd(), 'data', 'billscan.db');
-let db: Database.Database | null = null;
+let client: Client | null = null;
 
-export function getDb(): Database.Database {
-  if (db) return db;
-  mkdirSync(dirname(DB_PATH), { recursive: true });
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  runMigrations(db);
-  return db;
+export function getDb(): Client {
+  if (client) return client;
+
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  if (url && authToken) {
+    // Production: connect to Turso
+    client = createClient({ url, authToken });
+  } else {
+    // Local development: use local SQLite file
+    client = createClient({
+      url: 'file:data/billscan.db',
+    });
+  }
+
+  return client;
 }
 
 export function closeDb(): void {
-  if (db) {
-    db.close();
-    db = null;
+  if (client) {
+    client.close();
+    client = null;
   }
 }

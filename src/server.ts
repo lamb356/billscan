@@ -13,11 +13,13 @@ import { runAudit } from './analyzer/audit.js';
 import { checkCharityCare } from './analyzer/charity-care.js';
 import { getAggregateStats } from './output/stats.js';
 import { getDb } from './db/connection.js';
+import { runMigrations } from './db/migrations.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const WEB_DIR = path.resolve(process.cwd(), 'web');
 const UPLOAD_LIMIT = 10 * 1024 * 1024; // 10MB
 
+// ─── MIME types for static files ────────────────────────────────────────────
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
@@ -29,6 +31,8 @@ const MIME: Record<string, string> = {
   '.svg':  'image/svg+xml',
   '.woff2': 'font/woff2',
 };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function sendJson(res: http.ServerResponse, status: number, data: unknown) {
   const body = JSON.stringify(data, null, 2);
@@ -62,6 +66,7 @@ function getPath(url: string): string {
   return url.split('?')[0];
 }
 
+/** Read entire request body as a Buffer, enforcing size limit */
 function readBody(req: http.IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -80,6 +85,10 @@ function readBody(req: http.IncomingMessage): Promise<Buffer> {
   });
 }
 
+/**
+ * Parse multipart/form-data body.
+ * Returns: { fields: Record<string, string>, files: Array<{name, filename, data, contentType}> }
+ */
 function parseMultipart(
   body: Buffer,
   boundary: string
@@ -91,19 +100,25 @@ function parseMultipart(
   const files: Array<{ name: string; filename: string; data: Buffer; contentType: string }> = [];
 
   const boundaryBuf = Buffer.from('--' + boundary);
+  const CRLF = Buffer.from('\r\n');
   const CRLFCRLF = Buffer.from('\r\n\r\n');
 
   let pos = 0;
-  const parts: Buffer[] = [];
 
+  // Find all boundary positions
+  const parts: Buffer[] = [];
   while (pos < body.length) {
     const start = indexOf(body, boundaryBuf, pos);
     if (start === -1) break;
     pos = start + boundaryBuf.length;
+    // Check for final boundary (--)
     if (body[pos] === 0x2d && body[pos + 1] === 0x2d) break;
+    // Skip CRLF after boundary
     if (body[pos] === 0x0d && body[pos + 1] === 0x0a) pos += 2;
+    // Find the next boundary
     const end = indexOf(body, boundaryBuf, pos);
     if (end === -1) break;
+    // Part data is from pos to end-2 (strip trailing CRLF)
     parts.push(body.slice(pos, end - 2));
   }
 
@@ -114,6 +129,7 @@ function parseMultipart(
     const headerBlock = part.slice(0, headerEnd).toString('utf-8');
     const data = part.slice(headerEnd + 4);
 
+    // Parse headers
     const headers: Record<string, string> = {};
     for (const line of headerBlock.split('\r\n')) {
       const colonIdx = line.indexOf(':');
@@ -152,25 +168,32 @@ function indexOf(haystack: Buffer, needle: Buffer, start: number): number {
   return -1;
 }
 
+/** Write a buffer to a temp file, return the path */
 function writeTempFile(data: Buffer, ext: string): string {
   const tmpPath = path.join(os.tmpdir(), `billscan-${randomUUID()}${ext}`);
   fs.writeFileSync(tmpPath, data);
   return tmpPath;
 }
 
+/** Safely remove a temp file */
 function cleanupTemp(p: string) {
   try { fs.unlinkSync(p); } catch { /* ignore */ }
 }
 
+// ─── Serve static files ───────────────────────────────────────────────────────
+
 function serveStatic(reqPath: string, res: http.ServerResponse) {
+  // Resolve to index.html for SPA routes
   let filePath = path.join(WEB_DIR, reqPath === '/' ? 'index.html' : reqPath);
 
+  // Security: prevent path traversal
   if (!filePath.startsWith(WEB_DIR)) {
     sendError(res, 403, 'Forbidden');
     return;
   }
 
   if (!fs.existsSync(filePath)) {
+    // Fallback to index.html for client-side routing
     const indexPath = path.join(WEB_DIR, 'index.html');
     if (fs.existsSync(indexPath)) {
       filePath = indexPath;
@@ -191,70 +214,111 @@ function serveStatic(reqPath: string, res: http.ServerResponse) {
   res.end(content);
 }
 
-async function handleHealth(_req: http.IncomingMessage, res: http.ServerResponse) {
+// ─── API route handlers ───────────────────────────────────────────────────────
+
+async function handleHealth(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
   try {
     const db = getDb();
-    const pfsCount = (db.prepare('SELECT COUNT(*) as c FROM pfs_rates').get() as { c: number }).c;
-    let total = pfsCount;
-    try { total += (db.prepare('SELECT COUNT(*) as c FROM clfs_rates').get() as { c: number }).c; } catch { /* ignore */ }
-    try { total += (db.prepare('SELECT COUNT(*) as c FROM asp_rates').get() as { c: number }).c; } catch { /* ignore */ }
-    try { total += (db.prepare('SELECT COUNT(*) as c FROM opps_rates').get() as { c: number }).c; } catch { /* ignore */ }
+    const cmsRow = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM cms_rates', args: [] })).rows[0];
+    let total = (cmsRow as { c: number }).c;
+    try {
+      const clfsRow = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM clfs_rates', args: [] })).rows[0];
+      total += (clfsRow as { c: number }).c;
+    } catch { /* table may not exist */ }
+    try {
+      const aspRow = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM asp_rates', args: [] })).rows[0];
+      total += (aspRow as { c: number }).c;
+    } catch { /* table may not exist */ }
+    try {
+      const oppsRow = (await db.execute({ sql: 'SELECT COUNT(*) as c FROM opps_rates', args: [] })).rows[0];
+      total += (oppsRow as { c: number }).c;
+    } catch { /* table may not exist */ }
+
     sendJson(res, 200, { status: 'ok', rates: total, version: '0.3.0' });
   } catch (err) {
     sendJson(res, 200, { status: 'ok', rates: 0, version: '0.3.0', warning: (err as Error).message });
   }
 }
 
-async function handleDataSources(_req: http.IncomingMessage, res: http.ServerResponse) {
+async function handleDataSources(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
   try {
     const db = getDb();
     const sources: Array<{ name: string; count: number; lastUpdated: string | null }> = [];
-    const tableChecks = [
-      { name: 'PFS', table: 'pfs_rates' },
+
+    const tableChecks: Array<{ name: string; table: string }> = [
+      { name: 'PFS', table: 'cms_rates' },
       { name: 'CLFS', table: 'clfs_rates' },
       { name: 'ASP', table: 'asp_rates' },
       { name: 'OPPS', table: 'opps_rates' },
     ];
+
     for (const { name, table } of tableChecks) {
       try {
-        const row = db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get() as { c: number };
+        const row = (await db.execute({ sql: `SELECT COUNT(*) as c FROM ${table}`, args: [] })).rows[0] as { c: number };
+        // Try to get snapshot info
         let lastUpdated: string | null = null;
         try {
-          const snap = db.prepare(`SELECT fetched_at FROM cms_snapshots ORDER BY fetched_at DESC LIMIT 1`).get() as { fetched_at: string } | undefined;
+          const snap = (await db.execute({
+            sql: `SELECT fetched_at FROM cms_snapshots ORDER BY fetched_at DESC LIMIT 1`,
+            args: [],
+          })).rows[0] as { fetched_at: string } | undefined;
           lastUpdated = snap?.fetched_at ?? null;
         } catch { /* ignore */ }
         sources.push({ name, count: row.c, lastUpdated });
-      } catch { /* table doesn't exist yet */ }
+      } catch {
+        // table doesn't exist yet
+      }
     }
+
     sendJson(res, 200, { sources });
   } catch (err) {
     sendError(res, 500, (err as Error).message);
   }
 }
 
-async function handleStats(_req: http.IncomingMessage, res: http.ServerResponse) {
+async function handleStats(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
   try {
-    const stats = getAggregateStats();
+    const stats = await getAggregateStats();
     sendJson(res, 200, stats);
   } catch (err) {
     sendError(res, 500, (err as Error).message);
   }
 }
 
-async function handleAuditFile(req: http.IncomingMessage, res: http.ServerResponse, url: string) {
+async function handleAuditFile(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
   const params = parseQueryParams(url);
   let tmpPath: string | null = null;
 
   try {
     const contentType = req.headers['content-type'] ?? '';
     let body: Buffer;
-    try { body = await readBody(req); } catch (err) { return sendError(res, 413, (err as Error).message); }
 
+    try {
+      body = await readBody(req);
+    } catch (err) {
+      return sendError(res, 413, (err as Error).message);
+    }
+
+    // Determine file extension and data
     let fileData: Buffer;
     let fileExt = '.json';
     let fileName = 'bill';
 
     if (contentType.includes('multipart/form-data')) {
+      // Parse multipart
       const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
       if (!boundaryMatch) return sendError(res, 400, 'Missing multipart boundary');
       const { files } = parseMultipart(body, boundaryMatch[1]);
@@ -268,14 +332,16 @@ async function handleAuditFile(req: http.IncomingMessage, res: http.ServerRespon
       fileExt = '.json';
     } else if (contentType.includes('application/octet-stream') || body.length > 0) {
       fileData = body;
-      if (body[0] === 0x25 && body[1] === 0x50) fileExt = '.pdf';
-      else if (body[0] === 0xff && body[1] === 0xd8) fileExt = '.jpg';
-      else if (body[0] === 0x89 && body[1] === 0x50) fileExt = '.png';
+      // Try to detect from magic bytes
+      if (body[0] === 0x25 && body[1] === 0x50) fileExt = '.pdf'; // %P
+      else if (body[0] === 0xff && body[1] === 0xd8) fileExt = '.jpg'; // JPEG
+      else if (body[0] === 0x89 && body[1] === 0x50) fileExt = '.png'; // PNG
       else fileExt = '.json';
     } else {
       return sendError(res, 400, 'No file data received');
     }
 
+    // Write to temp file
     tmpPath = writeTempFile(fileData, fileExt);
 
     const auditOptions = {
@@ -287,8 +353,9 @@ async function handleAuditFile(req: http.IncomingMessage, res: http.ServerRespon
 
     const report = await runAudit(tmpPath, auditOptions);
 
+    // Optionally include charity care
     if (params.charity === 'true' && report.facilityName) {
-      const charityResult = checkCharityCare(report.facilityName, params.zip, params.state);
+      const charityResult = await checkCharityCare(report.facilityName, params.zip, params.state);
       sendJson(res, 200, { ...report, charityCheck: charityResult });
     } else {
       sendJson(res, 200, report);
@@ -305,15 +372,28 @@ async function handleAuditFile(req: http.IncomingMessage, res: http.ServerRespon
   }
 }
 
-async function handleAuditJson(req: http.IncomingMessage, res: http.ServerResponse, url: string) {
+async function handleAuditJson(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
   const params = parseQueryParams(url);
   let tmpPath: string | null = null;
 
   try {
     let body: Buffer;
-    try { body = await readBody(req); } catch (err) { return sendError(res, 413, (err as Error).message); }
+    try {
+      body = await readBody(req);
+    } catch (err) {
+      return sendError(res, 413, (err as Error).message);
+    }
 
-    try { JSON.parse(body.toString('utf-8')); } catch { return sendError(res, 400, 'Invalid JSON body'); }
+    // Validate it's parseable JSON
+    try {
+      JSON.parse(body.toString('utf-8'));
+    } catch {
+      return sendError(res, 400, 'Invalid JSON body');
+    }
 
     tmpPath = writeTempFile(body, '.json');
 
@@ -327,7 +407,7 @@ async function handleAuditJson(req: http.IncomingMessage, res: http.ServerRespon
     const report = await runAudit(tmpPath, auditOptions);
 
     if (params.charity === 'true' && report.facilityName) {
-      const charityResult = checkCharityCare(report.facilityName, params.zip, params.state);
+      const charityResult = await checkCharityCare(report.facilityName, params.zip, params.state);
       sendJson(res, 200, { ...report, charityCheck: charityResult });
     } else {
       sendJson(res, 200, report);
@@ -344,28 +424,47 @@ async function handleAuditJson(req: http.IncomingMessage, res: http.ServerRespon
   }
 }
 
-async function handleCharityCheck(req: http.IncomingMessage, res: http.ServerResponse) {
+async function handleCharityCheck(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
   try {
     let body: Buffer;
-    try { body = await readBody(req); } catch (err) { return sendError(res, 413, (err as Error).message); }
+    try {
+      body = await readBody(req);
+    } catch (err) {
+      return sendError(res, 413, (err as Error).message);
+    }
 
     let parsed: { facilityName?: string; zip?: string; state?: string };
-    try { parsed = JSON.parse(body.toString('utf-8')); } catch { return sendError(res, 400, 'Invalid JSON body'); }
+    try {
+      parsed = JSON.parse(body.toString('utf-8'));
+    } catch {
+      return sendError(res, 400, 'Invalid JSON body');
+    }
 
-    if (!parsed.facilityName) return sendError(res, 400, 'facilityName is required');
+    if (!parsed.facilityName) {
+      return sendError(res, 400, 'facilityName is required');
+    }
 
-    const result = checkCharityCare(parsed.facilityName, parsed.zip, parsed.state);
+    const result = await checkCharityCare(parsed.facilityName, parsed.zip, parsed.state);
     sendJson(res, 200, result);
   } catch (err) {
     sendError(res, 500, (err as Error).message);
   }
 }
 
-async function requestHandler(req: http.IncomingMessage, res: http.ServerResponse) {
+// ─── Main request router ──────────────────────────────────────────────────────
+
+async function requestHandler(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
   const method = req.method ?? 'GET';
   const url = req.url ?? '/';
   const pathname = getPath(url);
 
+  // CORS preflight
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -376,33 +475,60 @@ async function requestHandler(req: http.IncomingMessage, res: http.ServerRespons
     return;
   }
 
+  // API routes
   if (pathname.startsWith('/api/')) {
-    if (method === 'GET' && pathname === '/api/health') return handleHealth(req, res);
-    if (method === 'GET' && pathname === '/api/stats') return handleStats(req, res);
-    if (method === 'GET' && pathname === '/api/data-sources') return handleDataSources(req, res);
-    if (method === 'POST' && pathname === '/api/audit') return handleAuditFile(req, res, url);
-    if (method === 'POST' && pathname === '/api/audit/json') return handleAuditJson(req, res, url);
-    if (method === 'POST' && pathname === '/api/charity-check') return handleCharityCheck(req, res);
+    if (method === 'GET' && pathname === '/api/health') {
+      return handleHealth(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/stats') {
+      return handleStats(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/data-sources') {
+      return handleDataSources(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/audit') {
+      return handleAuditFile(req, res, url);
+    }
+    if (method === 'POST' && pathname === '/api/audit/json') {
+      return handleAuditJson(req, res, url);
+    }
+    if (method === 'POST' && pathname === '/api/charity-check') {
+      return handleCharityCheck(req, res);
+    }
     return sendError(res, 404, `API endpoint not found: ${method} ${pathname}`);
   }
 
+  // Static files
   serveStatic(pathname, res);
 }
 
-const server = http.createServer(requestHandler);
+// ─── Start server ─────────────────────────────────────────────────────────────
 
-server.listen(PORT, () => {
-  console.log(`[billscan] Server running at http://localhost:${PORT}`);
-  console.log(`[billscan] API: http://localhost:${PORT}/api/health`);
-  console.log(`[billscan] UI:  http://localhost:${PORT}/`);
-});
+async function startServer() {
+  await runMigrations();
 
-server.on('error', (err: NodeJS.ErrnoException) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`[billscan] Port ${PORT} is already in use. Set PORT env var to use a different port.`);
-  } else {
-    console.error('[billscan] Server error:', err);
-  }
+  const server = http.createServer(requestHandler);
+
+  server.listen(PORT, () => {
+    console.log(`[billscan] Server running at http://localhost:${PORT}`);
+    console.log(`[billscan] API: http://localhost:${PORT}/api/health`);
+    console.log(`[billscan] UI:  http://localhost:${PORT}/`);
+  });
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[billscan] Port ${PORT} is already in use. Set PORT env var to use a different port.`);
+    } else {
+      console.error('[billscan] Server error:', err);
+    }
+    process.exit(1);
+  });
+
+  return server;
+}
+
+const server = startServer().catch((err) => {
+  console.error('[billscan] Failed to start server:', err);
   process.exit(1);
 });
 

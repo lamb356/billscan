@@ -14,20 +14,22 @@ export interface CharityCareResult {
  * Uses a built-in database of known 501(c)(3) hospitals.
  * All nonprofit hospitals are required by the ACA to have a Financial Assistance Policy (FAP).
  */
-export function checkCharityCare(facilityName: string, zip?: string, state?: string): CharityCareResult {
+export async function checkCharityCare(facilityName: string, zip?: string, state?: string): Promise<CharityCareResult> {
   const db = getDb();
   const advice: string[] = [];
 
   // Try exact name match first
-  let row = db.prepare(
-    `SELECT ein, name, city, state, zip_code, fap_url FROM charity_hospitals WHERE LOWER(name) LIKE ?`
-  ).get(`%${facilityName.toLowerCase()}%`) as any;
+  let row = (await db.execute({
+    sql: `SELECT ein, name, city, state, zip_code, fap_url FROM charity_hospitals WHERE LOWER(name) LIKE ?`,
+    args: [`%${facilityName.toLowerCase()}%`],
+  })).rows[0] as any;
 
   // Try by ZIP code
   if (!row && zip) {
-    row = db.prepare(
-      `SELECT ein, name, city, state, zip_code, fap_url FROM charity_hospitals WHERE zip_code = ? LIMIT 1`
-    ).get(zip);
+    row = (await db.execute({
+      sql: `SELECT ein, name, city, state, zip_code, fap_url FROM charity_hospitals WHERE zip_code = ? LIMIT 1`,
+      args: [zip],
+    })).rows[0];
   }
 
   if (row) {
@@ -74,7 +76,7 @@ export function checkCharityCare(facilityName: string, zip?: string, state?: str
  * Seed the charity hospital database with known major nonprofit hospital systems.
  * In production, this would be populated from IRS 990 filings and CMS Provider of Services data.
  */
-export function seedCharityHospitals(): void {
+export async function seedCharityHospitals(): Promise<void> {
   const db = getDb();
 
   const hospitals = [
@@ -100,17 +102,17 @@ export function seedCharityHospitals(): void {
     { ein: '39-0806390', name: 'Aurora Medical Center', city: 'Milwaukee', state: 'WI', zip: '53215' },
   ];
 
-  const insert = db.prepare(`
+  const sql = `
     INSERT OR IGNORE INTO charity_hospitals (ein, name, city, state, zip_code)
     VALUES (?, ?, ?, ?, ?)
-  `);
+  `;
 
-  const txn = db.transaction(() => {
-    for (const h of hospitals) {
-      insert.run(h.ein, h.name, h.city, h.state, h.zip);
-    }
-  });
-  txn();
+  const stmts = hospitals.map(h => ({
+    sql,
+    args: [h.ein, h.name, h.city, h.state, h.zip] as any[],
+  }));
+
+  await db.batch(stmts);
 
   console.log(`[charity] Seeded ${hospitals.length} nonprofit hospitals`);
 }
