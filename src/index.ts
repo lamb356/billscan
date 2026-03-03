@@ -1,6 +1,5 @@
-export * from './schema/bill.js';
-export * from './schema/cms.js';
-export * from './schema/finding.js';
-export * from './schema/report.js';
-export * from './analyzer/audit.js';
-export * from './matcher/rate-matcher.js';
+export { runAudit } from './analyzer/audit.js';
+export { formatReportConsole } from './output/report-builder.js';
+export { renderViralCard } from './output/card-renderer.js';
+export { getAggregateStats } from './output/stats.js';
+export { getDb, closeDb } from './db/connection.js';
