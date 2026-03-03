@@ -1,0 +1,25 @@
+name: CMS Data Source Check
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'  # Monthly, 1st of month at 6am UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  check-sources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CMS PFS URL
+        run: curl -sI "https://www.cms.gov/medicare/payment/fee-schedules/physician" | head -5
+      
+      - name: Check CMS CLFS URL
+        run: curl -sI "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs" | head -5
+      
+      - name: Check CMS ASP URL
+        run: curl -sI "https://www.cms.gov/medicare/payment/fee-for-service-providers/part-b-drugs/average-drug-sales-price" | head -5
+      
+      - name: Check CMS OPPS URL
+        run: curl -sI "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient" | head -5
+      
+      - name: Summary
+        run: echo "All CMS data source URLs checked. Review above for any 4xx/5xx responses."
