@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { parseBill } from '../parser/bill-parser.js';
-import { matchRate, calculateSeverity, calculateDisputeStrength } from '../matcher/rate-matcher.js';
+import { matchRateMulti, calculateSeverity, calculateDisputeStrength } from '../matcher/multi-matcher.js';
 import { hash } from '../utils/hash.js';
 import { getDb } from '../db/connection.js';
 import type { AuditFinding } from '../schema/finding.js';
@@ -10,6 +10,7 @@ import type { AuditReport, TransparencyStamp } from '../schema/report.js';
 export interface AuditOptions {
   setting?: 'facility' | 'office';
   locality?: string;
+  zip?: string;
   save?: boolean;
   snapshotId?: number;
 }
@@ -28,26 +29,37 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
       : 'non_facility';
   }
 
-  // 3. Get snapshot info
+  // 3. Resolve locality from ZIP if provided
+  let locality = options.locality || undefined;
+  if (!locality && options.zip) {
+    locality = resolveZipLocality(options.zip) || undefined;
+    if (locality) {
+      console.log(`[audit] Resolved ZIP ${options.zip} → locality ${locality}`);
+    }
+  }
+
+  // 4. Get snapshot info
   const db = getDb();
   const snapshot = db.prepare(
     'SELECT id, source_url, effective_year, data_hash FROM cms_snapshots ORDER BY effective_year DESC, fetched_at DESC LIMIT 1'
   ).get() as { id: number; source_url: string; effective_year: number; data_hash: string } | undefined;
 
   if (!snapshot) {
-    throw new Error('No CMS data found. Run `billscan fetch-cms` first.');
+    throw new Error('No CMS data found. Run `billscan fetch-all` first.');
   }
 
-  // 4. Match each line item
+  // 5. Check available data sources
+  const dataSources = getAvailableDataSources(db);
+
+  // 6. Match each line item using multi-source matcher
   const findings: AuditFinding[] = [];
 
   for (const item of bill.lineItems) {
-    const match = matchRate(
+    const match = matchRateMulti(
       item.cptCode,
       item.modifier,
       rateContext,
-      options.locality,
-      options.snapshotId ?? snapshot.id,
+      locality,
     );
 
     const overchargeAmount = match.cmsRateUsed !== null
@@ -62,7 +74,7 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
       ? calculateSeverity(overchargeMultiplier)
       : null;
 
-    const disputeStrength = calculateDisputeStrength(match.matchMode, overchargeMultiplier);
+    const disputeStrength = calculateDisputeStrength(match.matchMode, match.rateSource, overchargeMultiplier);
 
     findings.push({
       lineNumber: item.lineNumber,
@@ -74,16 +86,19 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
       cmsRateUsed: match.cmsRateUsed,
       rateContext,
       matchMode: match.matchMode,
+      rateSource: match.rateSource,
       overchargeAmount,
       overchargeMultiplier,
       severity,
       disputeStrength,
       sourceUrl: snapshot.source_url,
       sourceEffectiveYear: snapshot.effective_year,
+      apc: match.apc,
+      dosage: match.dosage,
     });
   }
 
-  // 5. Calculate totals
+  // 7. Calculate totals
   const matched = findings.filter(f => f.matchMode !== 'unmatched');
   const unmatched = findings.filter(f => f.matchMode === 'unmatched');
 
@@ -98,7 +113,7 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
     ? +(multipliers.reduce((a, b) => a + b, 0) / multipliers.length).toFixed(1)
     : null;
 
-  // 6. Build summary
+  // 8. Build summary
   const topOvercharges = matched
     .filter(f => f.overchargeAmount !== null && f.overchargeAmount > 0)
     .sort((a, b) => (b.overchargeAmount ?? 0) - (a.overchargeAmount ?? 0))
@@ -118,7 +133,7 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
     }
   }
 
-  // 7. Generate stamp
+  // 9. Generate stamp
   const inputHash = await hash(readFileSync(billPath));
   const reportId = randomUUID();
 
@@ -129,11 +144,12 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
     cmsDataHash: snapshot.data_hash,
     cmsEffectiveYear: snapshot.effective_year,
     generatedAt: new Date().toISOString(),
-    toolVersion: '0.1.0',
+    toolVersion: '0.2.0',
     hashAlgorithm: inputHash.split(':')[0],
+    dataSources,
   };
 
-  // 8. Assemble report
+  // 10. Assemble report
   const report: AuditReport = {
     stamp,
     facilityName: bill.facilityName,
@@ -151,7 +167,7 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
     },
   };
 
-  // 9. Save if requested
+  // 11. Save if requested
   if (options.save) {
     db.prepare(`
       INSERT INTO audits (report_id, input_hash, snapshot_id, total_billed, total_cms, total_savings, finding_count, report_json)
@@ -170,4 +186,29 @@ export async function runAudit(billPath: string, options: AuditOptions = {}): Pr
   }
 
   return report;
+}
+
+function resolveZipLocality(zip: string): string | null {
+  const db = getDb();
+  const row = db.prepare(
+    'SELECT locality FROM zip_locality WHERE zip_code = ?'
+  ).get(zip) as { locality: string } | undefined;
+  return row?.locality || null;
+}
+
+function getAvailableDataSources(db: ReturnType<typeof getDb>): string[] {
+  const sources: string[] = ['PFS'];
+  try {
+    const clfs = db.prepare('SELECT COUNT(*) as c FROM clfs_rates').get() as { c: number };
+    if (clfs.c > 0) sources.push('CLFS');
+  } catch { /* table may not exist yet */ }
+  try {
+    const asp = db.prepare('SELECT COUNT(*) as c FROM asp_rates').get() as { c: number };
+    if (asp.c > 0) sources.push('ASP');
+  } catch { /* table may not exist yet */ }
+  try {
+    const opps = db.prepare('SELECT COUNT(*) as c FROM opps_rates').get() as { c: number };
+    if (opps.c > 0) sources.push('OPPS');
+  } catch { /* table may not exist yet */ }
+  return sources;
 }
