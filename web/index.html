@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BillScan — Medical Bill Audit Tool</title>
+  <meta name="description" content="Compare your hospital bill against real CMS Medicare rates from 4 federal data sources.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      scroll-behavior: smooth;
+      scroll-padding-top: 5rem;
+    }
+
+    :root {
+      /* Type Scale */
+      --text-xs:   clamp(0.6875rem, 0.65rem + 0.15vw, 0.8125rem);
+      --text-sm:   clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+      --text-base: clamp(0.9375rem, 0.88rem + 0.25vw, 1.0625rem);
+      --text-lg:   clamp(1.125rem, 0.95rem + 0.75vw, 1.5rem);
+      --text-xl:   clamp(1.5rem, 1.1rem + 1.5vw, 2.25rem);
+      --text-2xl:  clamp(2rem, 1.2rem + 2.5vw, 3.25rem);
+      --text-3xl:  clamp(2.5rem, 1rem + 4vw, 4.5rem);
+
+      /* Spacing */
+      --space-1:  0.25rem;
+      --space-2:  0.5rem;
+      --space-3:  0.75rem;
+      --space-4:  1rem;
+      --space-5:  1.25rem;
+      --space-6:  1.5rem;
+      --space-8:  2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+      --space-20: 5rem;
+      --space-24: 6rem;
+
+      /* Colors - Dark Theme (primary) */
+      --color-bg:          #0a0a0a;
+      --color-surface:     #141414;
+      --color-surface-2:   #1a1a1a;
+      --color-border:      #262626;
+      --color-border-subtle: #1e1e1e;
+
+      --color-text:        #e5e5e5;
+      --color-text-muted:  #a3a3a3;
+      --color-text-faint:  #525252;
+
+      --color-primary:       #3b82f6;
+      --color-primary-hover: #2563eb;
+      --color-primary-active:#1d4ed8;
+      --color-primary-dim:   rgba(59, 130, 246, 0.1);
+
+      --color-red:    #ef4444;
+      --color-orange: #f97316;
+      --color-yellow: #eab308;
+      --color-green:  #22c55e;
+
+      --color-red-dim:    rgba(239, 68, 68, 0.12);
+      --color-orange-dim: rgba(249, 115, 22, 0.12);
+      --color-yellow-dim: rgba(234, 179, 8, 0.10);
+      --color-green-dim:  rgba(34, 197, 94, 0.12);
+      --color-primary-surface: rgba(59, 130, 246, 0.08);
+
+      /* Radius */
+      --radius-sm:  0.375rem;
+      --radius-md:  0.5rem;
+      --radius-lg:  0.75rem;
+      --radius-xl:  1rem;
+      --radius-full: 9999px;
+
+      /* Transitions */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+
+      /* Shadows */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+
+      /* Content */
+      --content-max: 1200px;
+      --content-narrow: 900px;
+
+      /* Font */
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      min-height: 100dvh;
+      line-height: 1.6;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+    }
+
+    h1, h2, h3, h4 { text-wrap: balance; line-height: 1.2; }
+    p { text-wrap: pretty; }
+
+    a { color: var(--color-primary); text-decoration: none; transition: color var(--transition-fast); }
+    a:hover { color: var(--color-primary-hover); }
+
+    button { cursor: pointer; font: inherit; border: none; background: none; color: inherit; }
+
+    ::selection { background: rgba(59, 130, 246, 0.3); color: #fff; }
+
+    :focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
+    }
+
+    /* ========== LAYOUT ========== */
+    .container {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+    }
+
+    .container--narrow {
+      max-width: var(--content-narrow);
+    }
+
+    /* ========== NAV ========== */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .nav__inner {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 3.5rem;
+    }
+
+    .nav__logo {
+      font-size: var(--text-base);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .nav__logo svg { flex-shrink: 0; }
+
+    .nav__logo-bill { color: var(--color-primary); }
+
+    .nav__links {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      list-style: none;
+    }
+
+    .nav__link {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color var(--transition-fast);
+    }
+
+    .nav__link:hover,
+    .nav__link--active { color: var(--color-text); }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-5);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      line-height: 1.4;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn--primary {
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .btn--primary:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+    .btn--primary:active { background: var(--color-primary-active); transform: translateY(0); }
+
+    .btn--secondary {
+      background: transparent;
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+    }
+    .btn--secondary:hover { color: var(--color-text); border-color: var(--color-text-faint); }
+
+    .btn--ghost {
+      background: transparent;
+      color: var(--color-text-muted);
+      padding: var(--space-2) var(--space-3);
+    }
+    .btn--ghost:hover { color: var(--color-primary); }
+
+    .btn--lg {
+      padding: var(--space-3) var(--space-8);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      border-radius: var(--radius-lg);
+    }
+
+    /* ========== HERO ========== */
+    .hero {
+      padding: clamp(var(--space-16), 10vw, var(--space-24)) 0 clamp(var(--space-12), 6vw, var(--space-20));
+      text-align: center;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-4);
+      background: var(--color-primary-dim);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      font-weight: 500;
+      margin-bottom: var(--space-6);
+    }
+
+    .hero__badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--color-green);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .hero__title {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--color-text);
+      max-width: 800px;
+      margin: 0 auto var(--space-5);
+    }
+
+    .hero__subtitle {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      max-width: 600px;
+      margin: 0 auto var(--space-8);
+      line-height: 1.7;
+    }
+
+    .hero__actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+
+    /* ========== STATS ROW ========== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+      padding: var(--space-12) 0;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: var(--space-6) var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+
+    .stat-card__value {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-card__label {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-top: var(--space-1);
+    }
+
+    /* ========== FEATURES ========== */
+    .features {
+      padding: clamp(var(--space-12), 6vw, var(--space-20)) 0;
+    }
+
+    .features__header {
+      text-align: center;
+      margin-bottom: var(--space-12);
+    }
+
+    .features__title {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .features__desc {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
+    .features__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+
+    .feature-card {
+      padding: var(--space-6);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      transition: border-color var(--transition-fast);
+    }
+
+    .feature-card:hover {
+      border-color: var(--color-text-faint);
+    }
+
+    .feature-card__icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .feature-card__icon--pfs  { background: var(--color-primary-dim); color: var(--color-primary); }
+    .feature-card__icon--clfs { background: var(--color-green-dim); color: var(--color-green); }
+    .feature-card__icon--asp  { background: var(--color-orange-dim); color: var(--color-orange); }
+    .feature-card__icon--opps { background: var(--color-yellow-dim); color: var(--color-yellow); }
+    .feature-card__icon--geo  { background: var(--color-primary-dim); color: var(--color-primary); }
+    .feature-card__icon--charity { background: var(--color-green-dim); color: var(--color-green); }
+
+    .feature-card__title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .feature-card__desc {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+
+    /* ========== HOW IT WORKS ========== */
+    .how-it-works {
+      padding: clamp(var(--space-12), 6vw, var(--space-20)) 0;
+      border-top: 1px solid var(--color-border-subtle);
+    }
+
+    .how-it-works__title {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: var(--space-10);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-8);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .step {
+      text-align: center;
+    }
+
+    .step__number {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--color-primary-dim);
+      color: var(--color-primary);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      margin-bottom: var(--space-4);
+    }
+
+    .step__title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+
+    .step__desc {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+
+    /* ========== FOOTER ========== */
+    .footer {
+      padding: var(--space-8) 0;
+      border-top: 1px solid var(--color-border-subtle);
+      text-align: center;
+    }
+
+    .footer__text {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      line-height: 1.6;
+    }
+
+    /* ========== AUDIT PAGE ========== */
+    .audit-page {
+      padding: var(--space-10) 0 var(--space-16);
+    }
+
+    .audit-page__title {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+    }
+
+    .audit-page__subtitle {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-8);
+    }
+
+    /* Upload area */
+    .upload-area {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-12) var(--space-8);
+      text-align: center;
+      transition: all var(--transition-fast);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .upload-area:hover,
+    .upload-area--dragover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-dim);
+    }
+
+    .upload-area__icon {
+      margin: 0 auto var(--space-4);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      color: var(--color-text-muted);
+    }
+
+    .upload-area__title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      margin-bottom: var(--space-1);
+    }
+
+    .upload-area__desc {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-6);
+    }
+
+    .upload-area__input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-area__divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+      color: var(--color-text-faint);
+      font-size: var(--text-xs);
+    }
+
+    .upload-area__divider::before,
+    .upload-area__divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+
+    .btn--sample {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ========== RESULTS ========== */
+    .results { animation: fadeIn 400ms var(--ease-out); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Facility header */
+    .facility-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-6);
+      margin-bottom: var(--space-6);
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .facility-header__info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .facility-header__name {
+      font-size: var(--text-base);
+      font-weight: 600;
+    }
+
+    .facility-header__meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    .facility-header__tag {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--space-1) var(--space-2);
+      background: var(--color-primary-dim);
+      color: var(--color-primary);
+      border-radius: var(--radius-sm);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .facility-header__actions {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    /* Summary stats */
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .summary-stat {
+      padding: var(--space-4) var(--space-5);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+
+    .summary-stat__label {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-1);
+      white-space: nowrap;
+    }
+
+    .summary-stat__value {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    .summary-stat__value--red    { color: var(--color-red); }
+    .summary-stat__value--blue   { color: var(--color-primary); }
+    .summary-stat__value--green  { color: var(--color-green); }
+    .summary-stat__value--white  { color: var(--color-text); }
+
+    /* Findings table */
+    .findings-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: var(--space-6);
+    }
+
+    .findings-section__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .findings-section__title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+
+    .findings-section__count {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    .findings-table-wrapper {
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
+
+    .findings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-xs);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    .findings-table thead {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .findings-table th {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-muted);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .findings-table th:first-child { padding-left: var(--space-6); }
+    .findings-table th:last-child  { padding-right: var(--space-6); }
+
+    .findings-table td {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-border-subtle);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .findings-table td:first-child { padding-left: var(--space-6); }
+    .findings-table td:last-child  { padding-right: var(--space-6); }
+
+    .findings-table tbody tr {
+      transition: background var(--transition-fast);
+    }
+
+    .findings-table tbody tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .findings-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .td-desc { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    .td-right { text-align: right; }
+    .td-center { text-align: center; }
+    .td-amount { font-weight: 500; }
+    .td-cpt { font-weight: 600; color: var(--color-text); font-family: 'SF Mono', ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.6875rem; }
+
+    .delta-value { color: var(--color-red); font-weight: 600; }
+    .delta-multiplier { color: var(--color-text-muted); font-size: 0.625rem; margin-left: var(--space-1); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .badge--source {
+      background: var(--color-primary-dim);
+      color: var(--color-primary);
+    }
+
+    .badge--source-unmatched {
+      background: rgba(255,255,255,0.05);
+      color: var(--color-text-faint);
+    }
+
+    .badge--extreme {
+      background: var(--color-red-dim);
+      color: var(--color-red);
+    }
+
+    .badge--high {
+      background: var(--color-orange-dim);
+      color: var(--color-orange);
+    }
+
+    .badge--medium {
+      background: var(--color-yellow-dim);
+      color: var(--color-yellow);
+    }
+
+    .badge--low {
+      background: var(--color-green-dim);
+      color: var(--color-green);
+    }
+
+    .badge--none {
+      background: rgba(255,255,255,0.05);
+      color: var(--color-text-faint);
+    }
+
+    /* Severity breakdown */
+    .severity-breakdown {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-8);
+      flex-wrap: wrap;
+    }
+
+    .severity-breakdown__label {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+
+    .severity-breakdown__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-xs);
+    }
+
+    .severity-breakdown__count {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    /* Report stamp */
+    .report-stamp {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) var(--space-6);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-6);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      flex-wrap: wrap;
+    }
+
+    .report-stamp__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .report-stamp__label { color: var(--color-text-faint); }
+    .report-stamp__value { color: var(--color-text-muted); font-weight: 500; }
+
+    /* Unmatched row */
+    .row--unmatched td {
+      color: var(--color-text-faint);
+    }
+
+    .text-na {
+      color: var(--color-text-faint);
+      font-style: italic;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .stats-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+      }
+
+      .features__grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+      }
+
+      .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .summary-stats > :last-child {
+        grid-column: span 2;
+      }
+
+      .facility-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .severity-breakdown {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+      }
+
+      .report-stamp {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 0 var(--space-4); }
+
+      .nav__inner { padding: 0 var(--space-4); }
+
+      .hero { padding: var(--space-12) 0 var(--space-10); }
+
+      .hero__actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      .hero__actions .btn { width: 100%; }
+
+      .summary-stats {
+        grid-template-columns: 1fr;
+      }
+      .summary-stats > :last-child {
+        grid-column: span 1;
+      }
+
+      .upload-area {
+        padding: var(--space-8) var(--space-4);
+      }
+    }
+
+    /* ========== PAGE TRANSITIONS ========== */
+    .page { display: none; }
+    .page--active { display: block; animation: fadeIn 300ms var(--ease-out); }
+
+    /* ========== DIVIDER ========== */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--color-border-subtle);
+      margin: 0;
+    }
+
+    /* ========== DATA SOURCES BADGE ROW ========== */
+    .data-sources-row {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <!-- Skip to content -->
+  <a href="#main" class="sr-only" style="position:absolute;top:var(--space-2);left:var(--space-2);z-index:200;background:var(--color-primary);color:#fff;padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);" onfocus="this.style.clip='auto';this.style.width='auto';this.style.height='auto'" onblur="this.className='sr-only'">Skip to content</a>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav__inner">
+      <a href="#/" class="nav__logo" aria-label="BillScan Home" data-nav>
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="26" rx="3" stroke="#3b82f6" stroke-width="2.2" fill="none"/>
+          <path d="M7 11h10M7 15h10M7 19h6" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="24" cy="10" r="7" fill="#0a0a0a" stroke="#3b82f6" stroke-width="2"/>
+          <path d="M22 10l1.5 1.5L27 8" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span><span class="nav__logo-bill">Bill</span>Scan</span>
+      </a>
+      <ul class="nav__links" role="list">
+        <li><a href="#/" class="nav__link" data-nav-link="home" data-nav>Home</a></li>
+        <li><a href="#/audit" class="nav__link" data-nav-link="audit" data-nav>Audit</a></li>
+        <li><a href="https://github.com/lamb356/billscan" class="nav__link" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- ============ HOME PAGE ============ -->
+    <div id="page-home" class="page page--active">
+
+      <!-- Hero -->
+      <section class="hero">
+        <div class="container">
+          <div class="hero__badge">
+            <span class="hero__badge-dot"></span>
+            4 federal data sources &middot; 2026 rates loaded
+          </div>
+          <h1 class="hero__title">Your hospital bill vs. what Medicare actually pays</h1>
+          <p class="hero__subtitle">BillScan compares every line item on your medical bill against real CMS fee schedule data — across 4 federal pricing databases. No fake rates. No demo mode.</p>
+          <div class="hero__actions">
+            <a href="#/audit" class="btn btn--primary btn--lg" data-nav>Audit a bill</a>
+            <a href="https://github.com/lamb356/billscan" class="btn btn--secondary btn--lg" target="_blank" rel="noopener noreferrer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              View on GitHub
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section class="container" aria-label="Statistics">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card__value">1,057,383</div>
+            <div class="stat-card__label">CMS rates loaded</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value">4</div>
+            <div class="stat-card__label">Federal data sources</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value">2026</div>
+            <div class="stat-card__label">Fee schedule year</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="features" aria-label="Features">
+        <div class="container">
+          <div class="features__header">
+            <h2 class="features__title">Four federal pricing databases, one audit</h2>
+            <p class="features__desc">Real rates from CMS.gov — not estimates, not averages.</p>
+          </div>
+          <div class="features__grid">
+            <div class="feature-card">
+              <div class="feature-card__icon feature-card__icon--pfs">PFS</div>
+              <h3 class="feature-card__title">Physician Fee Schedule</h3>
+              <p class="feature-card__desc">1,000,000+ procedure rates for office visits, surgeries, imaging, and evaluations. The backbone of outpatient billing.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon feature-card__icon--clfs">CL</div>
+              <h3 class="feature-card__title">Clinical Lab Fee Schedule</h3>
+              <p class="feature-card__desc">2,130 lab test rates — blood panels, cultures, urinalysis, and diagnostics. Compare exactly what Medicare pays for labwork.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon feature-card__icon--asp">ASP</div>
+              <h3 class="feature-card__title">Average Sales Price (Drugs)</h3>
+              <p class="feature-card__desc">876 drug pricing rates. See the real per-unit cost for injectable and infused medications billed under Part B.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon feature-card__icon--opps">OP</div>
+              <h3 class="feature-card__title">Outpatient Prospective</h3>
+              <p class="feature-card__desc">18,986 APC rates for hospital outpatient services, facility fees, and ambulatory procedures.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon feature-card__icon--geo">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z"/></svg>
+              </div>
+              <h3 class="feature-card__title">Geographic Rate Matching</h3>
+              <p class="feature-card__desc">Rates adjusted by MAC locality for accurate regional comparisons. GPCI-aware matching for physician services.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon feature-card__icon--charity">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+              </div>
+              <h3 class="feature-card__title">Charity Care Checker</h3>
+              <p class="feature-card__desc">Identifies if your bill may qualify for hospital financial assistance or charity care programs based on billing patterns.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section class="how-it-works" aria-label="How it works">
+        <div class="container">
+          <h2 class="how-it-works__title">How it works</h2>
+          <div class="steps">
+            <div class="step">
+              <div class="step__number">1</div>
+              <h3 class="step__title">Upload your bill</h3>
+              <p class="step__desc">Drop your itemized bill JSON (exported from BillScan CLI or formatted manually) into the audit tool.</p>
+            </div>
+            <div class="step">
+              <div class="step__number">2</div>
+              <h3 class="step__title">Match against CMS</h3>
+              <p class="step__desc">Each CPT/HCPCS code is matched against PFS, CLFS, ASP, and OPPS databases using SHA-256 verified data.</p>
+            </div>
+            <div class="step">
+              <div class="step__number">3</div>
+              <h3 class="step__title">Review findings</h3>
+              <p class="step__desc">See every line item with billed amount, CMS rate, overcharge delta, and severity — with full source transparency.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============ AUDIT PAGE ============ -->
+    <div id="page-audit" class="page">
+      <section class="audit-page">
+        <div class="container">
+
+          <!-- Upload state -->
+          <div id="audit-upload">
+            <h1 class="audit-page__title">Audit a medical bill</h1>
+            <p class="audit-page__subtitle">Upload a BillScan JSON report or try the sample ER bill.</p>
+
+            <div class="upload-area" id="upload-area">
+              <div class="upload-area__icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <p class="upload-area__title">Drop your JSON file here</p>
+              <p class="upload-area__desc">or click to browse &middot; accepts .json files</p>
+              <input type="file" accept=".json,application/json" class="upload-area__input" id="file-input" aria-label="Upload JSON file">
+            </div>
+
+            <div style="text-align:center; margin-top: var(--space-6);">
+              <div class="upload-area__divider">or</div>
+              <button class="btn btn--secondary btn--sample" id="btn-sample">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Try with sample ER bill
+              </button>
+            </div>
+          </div>
+
+          <!-- Results state -->
+          <div id="audit-results" style="display:none;"></div>
+
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <p class="footer__text">BillScan v0.2.0 — Data from CMS.gov (PFS + CLFS + ASP + OPPS) — Not medical or legal advice</p>
+    </div>
+  </footer>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ===================== SAMPLE DATA =====================
+    const SAMPLE_AUDIT = {"stamp":{"reportId":"edee7f9f-1c63-4def-8e95-4e1cc910995b","cmsEffectiveYear":2026,"generatedAt":"2026-03-03T02:37:12.407Z","toolVersion":"0.2.0","dataSources":["PFS","CLFS","ASP","OPPS"]},"facilityName":"Memorial General Hospital","facilityType":"er","totalBilled":13184.00,"totalCmsBaseline":913.25,"totalPotentialSavings":12270.75,"matchedLineCount":11,"unmatchedLineCount":1,"findings":[{"lineNumber":1,"cptCode":"99285","description":"Emergency dept visit level 5","billedAmount":2847.00,"cmsFacilityRate":183.72,"cmsNonFacilityRate":183.72,"cmsRateUsed":183.72,"matchMode":"exact_code_only","rateSource":"pfs","overchargeAmount":2663.28,"overchargeMultiplier":15.5,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":2,"cptCode":"71046","description":"Chest X-ray 2 views","billedAmount":847.00,"cmsFacilityRate":43.76,"cmsNonFacilityRate":43.76,"cmsRateUsed":43.76,"matchMode":"exact_code_only","rateSource":"pfs","overchargeAmount":803.24,"overchargeMultiplier":19.4,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":3,"cptCode":"93000","description":"Electrocardiogram complete","billedAmount":1243.00,"cmsFacilityRate":19.22,"cmsNonFacilityRate":19.22,"cmsRateUsed":19.22,"matchMode":"exact_code_only","rateSource":"pfs","overchargeAmount":1223.78,"overchargeMultiplier":64.7,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":4,"cptCode":"99152","description":"Moderate sedation same provider","billedAmount":823.00,"cmsFacilityRate":68.91,"cmsNonFacilityRate":11.92,"cmsRateUsed":68.91,"matchMode":"exact_code_only","rateSource":"pfs","overchargeAmount":754.09,"overchargeMultiplier":11.9,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":5,"cptCode":"99291","description":"Critical care first 30-74 min","billedAmount":3250.00,"cmsFacilityRate":373.15,"cmsNonFacilityRate":218.21,"cmsRateUsed":373.15,"matchMode":"exact_code_only","rateSource":"pfs","overchargeAmount":2876.85,"overchargeMultiplier":8.7,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":6,"cptCode":"85025","description":"CBC with differential","billedAmount":285.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":11.57,"matchMode":"clfs","rateSource":"clfs","overchargeAmount":273.43,"overchargeMultiplier":24.6,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":7,"cptCode":"80053","description":"Comprehensive metabolic panel","billedAmount":320.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":14.22,"matchMode":"clfs","rateSource":"clfs","overchargeAmount":305.78,"overchargeMultiplier":22.5,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":8,"cptCode":"84484","description":"Troponin quantitative","billedAmount":425.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":18.31,"matchMode":"clfs","rateSource":"clfs","overchargeAmount":406.69,"overchargeMultiplier":23.2,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":9,"cptCode":"J2405","description":"Ondansetron 4mg injection","billedAmount":285.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":3.12,"matchMode":"asp","rateSource":"asp","overchargeAmount":281.88,"overchargeMultiplier":91.3,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":10,"cptCode":"J3010","description":"Fentanyl citrate 0.1mg","billedAmount":175.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":0.84,"matchMode":"asp","rateSource":"asp","overchargeAmount":174.16,"overchargeMultiplier":208.3,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":11,"cptCode":"36415","description":"Routine venipuncture","billedAmount":95.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":3.00,"matchMode":"clfs","rateSource":"clfs","overchargeAmount":92.00,"overchargeMultiplier":31.7,"severity":"extreme","disputeStrength":"strong"},{"lineNumber":12,"cptCode":"70553","description":"MRI brain with and without contrast","billedAmount":2400.00,"cmsFacilityRate":null,"cmsNonFacilityRate":null,"cmsRateUsed":null,"matchMode":"unmatched","rateSource":null,"overchargeAmount":null,"overchargeMultiplier":null,"severity":null,"disputeStrength":null}],"summary":{"topOvercharges":[{"cptCode":"J3010","description":"Fentanyl citrate 0.1mg","billedAmount":175.00,"cmsRate":0.84,"savings":174.16},{"cptCode":"J2405","description":"Ondansetron 4mg injection","billedAmount":285.00,"cmsRate":3.12,"savings":281.88},{"cptCode":"93000","description":"Electrocardiogram complete","billedAmount":1243.00,"cmsRate":19.22,"savings":1223.78},{"cptCode":"85025","description":"CBC with differential","billedAmount":285.00,"cmsRate":11.57,"savings":273.43},{"cptCode":"99291","description":"Critical care first 30-74 min","billedAmount":3250.00,"cmsRate":373.15,"savings":2876.85}],"averageMultiplier":47.4}};
+
+    // ===================== HELPERS =====================
+    function $(sel, ctx) { return (ctx || document).querySelector(sel); }
+    function $$(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
+
+    function fmt(n) {
+      if (n == null) return '—';
+      return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtInt(n) {
+      if (n == null) return '—';
+      return n.toLocaleString('en-US');
+    }
+
+    function fmtMult(n) {
+      if (n == null) return '—';
+      return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '×';
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // ===================== ROUTING =====================
+    function getRoute() {
+      const hash = window.location.hash || '#/';
+      return hash.replace('#', '').split('?')[0] || '/';
+    }
+
+    function navigateTo(route) {
+      window.location.hash = '#' + route;
+    }
+
+    function handleRoute() {
+      const route = getRoute();
+      const isAudit = route === '/audit';
+
+      $('#page-home').classList.toggle('page--active', !isAudit);
+      $('#page-audit').classList.toggle('page--active', isAudit);
+
+      // Update nav active state
+      $$('[data-nav-link]').forEach(el => {
+        el.classList.remove('nav__link--active');
+      });
+      const activeLink = isAudit ? 'audit' : 'home';
+      const activeLinkEl = $(`[data-nav-link="${activeLink}"]`);
+      if (activeLinkEl) activeLinkEl.classList.add('nav__link--active');
+
+      window.scrollTo(0, 0);
+    }
+
+    window.addEventListener('hashchange', handleRoute);
+
+    // Nav link handling
+    $$('[data-nav]').forEach(el => {
+      el.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          navigateTo(href.replace('#', ''));
+        }
+      });
+    });
+
+    // ===================== FILE UPLOAD =====================
+    const uploadArea = $('#upload-area');
+    const fileInput = $('#file-input');
+    const btnSample = $('#btn-sample');
+
+    if (uploadArea) {
+      ['dragenter', 'dragover'].forEach(ev => {
+        uploadArea.addEventListener(ev, e => {
+          e.preventDefault();
+          uploadArea.classList.add('upload-area--dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(ev => {
+        uploadArea.addEventListener(ev, e => {
+          e.preventDefault();
+          uploadArea.classList.remove('upload-area--dragover');
+        });
+      });
+
+      uploadArea.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) processFile(files[0]);
+      });
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', e => {
+        if (e.target.files.length > 0) processFile(e.target.files[0]);
+      });
+    }
+
+    if (btnSample) {
+      btnSample.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        renderResults(SAMPLE_AUDIT);
+      });
+    }
+
+    function processFile(file) {
+      if (!file.name.endsWith('.json')) {
+        alert('Please upload a .json file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.findings && Array.isArray(data.findings)) {
+            renderResults(data);
+          } else {
+            alert('Invalid BillScan report format. Missing "findings" array.');
+          }
+        } catch (err) {
+          alert('Error parsing JSON: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ===================== RENDER RESULTS =====================
+    function renderResults(data) {
+      const uploadEl = $('#audit-upload');
+      const resultsEl = $('#audit-results');
+
+      uploadEl.style.display = 'none';
+      resultsEl.style.display = 'block';
+
+      // Severity counts
+      const severityCounts = { extreme: 0, high: 0, medium: 0, low: 0 };
+      data.findings.forEach(f => {
+        if (f.severity && severityCounts.hasOwnProperty(f.severity)) {
+          severityCounts[f.severity]++;
+        }
+      });
+
+      const avgMult = data.summary && data.summary.averageMultiplier != null
+        ? data.summary.averageMultiplier
+        : null;
+
+      // Build stamp info
+      const stamp = data.stamp || {};
+      const stampDate = stamp.generatedAt ? new Date(stamp.generatedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
+      let html = `<div class="results">`;
+
+      // Report stamp
+      html += `
+        <div class="report-stamp">
+          <div class="report-stamp__item">
+            <span class="report-stamp__label">Report</span>
+            <span class="report-stamp__value" style="font-family:ui-monospace,monospace;font-size:0.625rem;">${escapeHtml((stamp.reportId || '').substring(0,8))}…</span>
+          </div>
+          <div class="report-stamp__item">
+            <span class="report-stamp__label">Generated</span>
+            <span class="report-stamp__value">${escapeHtml(stampDate)}</span>
+          </div>
+          <div class="report-stamp__item">
+            <span class="report-stamp__label">CMS Year</span>
+            <span class="report-stamp__value">${stamp.cmsEffectiveYear || '—'}</span>
+          </div>
+          <div class="report-stamp__item">
+            <span class="report-stamp__label">Version</span>
+            <span class="report-stamp__value">${escapeHtml(stamp.toolVersion || '—')}</span>
+          </div>
+          <div class="report-stamp__item">
+            <span class="report-stamp__label">Sources</span>
+            <span class="data-sources-row">
+              ${(stamp.dataSources || []).map(s => `<span class="badge badge--source">${escapeHtml(s)}</span>`).join('')}
+            </span>
+          </div>
+        </div>`;
+
+      // Facility header
+      html += `
+        <div class="facility-header">
+          <div class="facility-header__info">
+            <div class="facility-header__name">${escapeHtml(data.facilityName || 'Unknown Facility')}</div>
+            <div class="facility-header__meta">
+              <span class="facility-header__tag">${escapeHtml((data.facilityType || 'unknown').toUpperCase())}</span>
+              <span>${data.matchedLineCount || 0} matched &middot; ${data.unmatchedLineCount || 0} unmatched</span>
+            </div>
+          </div>
+          <div class="facility-header__actions">
+            <button class="btn btn--ghost" id="btn-reset" aria-label="Audit another bill">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+              Audit another bill
+            </button>
+          </div>
+        </div>`;
+
+      // Summary stats
+      html += `
+        <div class="summary-stats">
+          <div class="summary-stat">
+            <div class="summary-stat__label">Total Billed</div>
+            <div class="summary-stat__value summary-stat__value--red">$${fmt(data.totalBilled)}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat__label">CMS Baseline</div>
+            <div class="summary-stat__value summary-stat__value--blue">$${fmt(data.totalCmsBaseline)}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat__label">Potential Savings</div>
+            <div class="summary-stat__value summary-stat__value--green">$${fmt(data.totalPotentialSavings)}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat__label">Avg. Multiplier</div>
+            <div class="summary-stat__value summary-stat__value--white">${avgMult != null ? fmtMult(avgMult) : '—'}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat__label">Lines Matched</div>
+            <div class="summary-stat__value summary-stat__value--white">${data.matchedLineCount || 0}<span style="color:var(--color-text-faint);font-size:var(--text-xs);font-weight:400;">/${(data.matchedLineCount || 0) + (data.unmatchedLineCount || 0)}</span></div>
+          </div>
+        </div>`;
+
+      // Severity breakdown
+      html += `
+        <div class="severity-breakdown">
+          <span class="severity-breakdown__label">Severity breakdown</span>
+          ${severityCounts.extreme > 0 ? `<span class="severity-breakdown__item"><span class="badge badge--extreme">EXTREME</span><span class="severity-breakdown__count">${severityCounts.extreme}</span></span>` : ''}
+          ${severityCounts.high > 0 ? `<span class="severity-breakdown__item"><span class="badge badge--high">HIGH</span><span class="severity-breakdown__count">${severityCounts.high}</span></span>` : ''}
+          ${severityCounts.medium > 0 ? `<span class="severity-breakdown__item"><span class="badge badge--medium">MEDIUM</span><span class="severity-breakdown__count">${severityCounts.medium}</span></span>` : ''}
+          ${severityCounts.low > 0 ? `<span class="severity-breakdown__item"><span class="badge badge--low">LOW</span><span class="severity-breakdown__count">${severityCounts.low}</span></span>` : ''}
+        </div>`;
+
+      // Findings table
+      html += `
+        <div class="findings-section">
+          <div class="findings-section__header">
+            <h2 class="findings-section__title">Line item findings</h2>
+            <span class="findings-section__count">${data.findings.length} items</span>
+          </div>
+          <div class="findings-table-wrapper">
+            <table class="findings-table" role="table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">CPT</th>
+                  <th scope="col">Description</th>
+                  <th scope="col" class="td-right">Billed</th>
+                  <th scope="col" class="td-right">CMS Fac.</th>
+                  <th scope="col" class="td-right">CMS NonFac.</th>
+                  <th scope="col" class="td-right">Delta</th>
+                  <th scope="col" class="td-center">Source</th>
+                  <th scope="col" class="td-center">Severity</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+      data.findings.forEach(f => {
+        const isUnmatched = f.matchMode === 'unmatched';
+        const rowClass = isUnmatched ? ' class="row--unmatched"' : '';
+
+        const sourceBadge = f.rateSource
+          ? `<span class="badge badge--source">${escapeHtml(f.rateSource.toUpperCase())}</span>`
+          : `<span class="badge badge--source-unmatched">—</span>`;
+
+        let severityBadge = '<span class="badge badge--none">—</span>';
+        if (f.severity) {
+          const sev = f.severity.toLowerCase();
+          severityBadge = `<span class="badge badge--${sev}">${escapeHtml(f.severity.toUpperCase())}</span>`;
+        }
+
+        const deltaCell = f.overchargeAmount != null
+          ? `<span class="delta-value">+$${fmt(f.overchargeAmount)}</span><span class="delta-multiplier">${fmtMult(f.overchargeMultiplier)}</span>`
+          : `<span class="text-na">N/A</span>`;
+
+        html += `
+                <tr${rowClass}>
+                  <td>${f.lineNumber}</td>
+                  <td class="td-cpt">${escapeHtml(f.cptCode)}</td>
+                  <td class="td-desc">${escapeHtml(f.description)}</td>
+                  <td class="td-right td-amount">$${fmt(f.billedAmount)}</td>
+                  <td class="td-right">${f.cmsFacilityRate != null ? '$' + fmt(f.cmsFacilityRate) : '<span class="text-na">—</span>'}</td>
+                  <td class="td-right">${f.cmsNonFacilityRate != null ? '$' + fmt(f.cmsNonFacilityRate) : '<span class="text-na">—</span>'}</td>
+                  <td class="td-right">${deltaCell}</td>
+                  <td class="td-center">${sourceBadge}</td>
+                  <td class="td-center">${severityBadge}</td>
+                </tr>`;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+
+      // Bottom actions
+      html += `
+        <div style="text-align:center;">
+          <button class="btn btn--secondary" id="btn-reset-bottom">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+            Audit another bill
+          </button>
+        </div>`;
+
+      html += `</div>`;
+
+      resultsEl.innerHTML = html;
+
+      // Bind reset buttons
+      const resetBtns = resultsEl.querySelectorAll('#btn-reset, #btn-reset-bottom');
+      resetBtns.forEach(btn => {
+        btn.addEventListener('click', resetAudit);
+      });
+    }
+
+    function resetAudit() {
+      const uploadEl = $('#audit-upload');
+      const resultsEl = $('#audit-results');
+      resultsEl.style.display = 'none';
+      resultsEl.innerHTML = '';
+      uploadEl.style.display = 'block';
+      if (fileInput) fileInput.value = '';
+      window.scrollTo(0, 0);
+    }
+
+    // ===================== INIT =====================
+    handleRoute();
+    // Auto-load sample if hash has ?sample
+    if (window.location.hash.includes('sample')) {
+      setTimeout(function() { renderResults(SAMPLE_AUDIT); }, 100);
+    }
+  })();
+  </script>
+</body>
+</html>
