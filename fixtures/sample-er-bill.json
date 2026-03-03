@@ -1,0 +1,20 @@
+{
+  "facilityName": "Memorial General Hospital",
+  "facilityType": "er",
+  "statementDate": "2026-01-15",
+  "lineItems": [
+    { "lineNumber": 1, "cptCode": "99285", "description": "Emergency dept visit level 5", "billedAmount": 2847.00, "units": 1 },
+    { "lineNumber": 2, "cptCode": "71046", "description": "Chest X-ray 2 views", "billedAmount": 847.00, "units": 1 },
+    { "lineNumber": 3, "cptCode": "93000", "description": "Electrocardiogram complete", "billedAmount": 1243.00, "units": 1 },
+    { "lineNumber": 4, "cptCode": "99152", "description": "Moderate sedation same provider", "billedAmount": 823.00, "units": 1 },
+    { "lineNumber": 5, "cptCode": "99291", "description": "Critical care first 30-74 min", "billedAmount": 3250.00, "units": 1 },
+    { "lineNumber": 6, "cptCode": "12001", "description": "Simple laceration repair 2.5cm", "billedAmount": 1485.00, "units": 1 },
+    { "lineNumber": 7, "cptCode": "36415", "description": "Venipuncture blood draw", "billedAmount": 189.00, "units": 1 },
+    { "lineNumber": 8, "cptCode": "85025", "description": "CBC automated w/ diff", "billedAmount": 287.00, "units": 1 },
+    { "lineNumber": 9, "cptCode": "80053", "description": "Comprehensive metabolic panel", "billedAmount": 456.00, "units": 1 },
+    { "lineNumber": 10, "cptCode": "J3490", "modifier": "UN", "description": "Acetaminophen 500mg oral", "billedAmount": 47.00, "units": 1 }
+  ],
+  "totalBilled": 11474.00,
+  "parseConfidence": 1.0,
+  "sourceType": "json"
+}
