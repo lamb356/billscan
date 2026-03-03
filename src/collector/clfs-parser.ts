@@ -11,12 +11,11 @@ import { hashFile } from '../utils/hash.js';
 export interface CLFSRate {
   hcpcsCode: string;
   modifier: string | null;
-  effDate: string | null;
-  indicator: string | null;
   rate: number;
   shortDesc: string | null;
   longDesc: string | null;
-  extendedDesc: string | null;
+  indicator: string | null;
+  effectiveDate: string | null;
   effectiveYear: number;
 }
 
@@ -44,9 +43,10 @@ export async function parseClfsCsv(csvPath: string, effectiveYear: number): Prom
     lineNum++;
     if (!line.trim()) continue;
 
+    // Find the header row
     if (!headerFound) {
       const upper = line.toUpperCase();
-      if (upper.includes('HCPCS') && upper.includes('RATE')) {
+      if (upper.includes('YEAR') && upper.includes('HCPCS') && upper.includes('RATE')) {
         const cols = parseCsvLine(line);
         for (let i = 0; i < cols.length; i++) {
           headerMap[cols[i].trim().toUpperCase()] = i;
@@ -59,26 +59,26 @@ export async function parseClfsCsv(csvPath: string, effectiveYear: number): Prom
     }
 
     const fields = parseCsvLine(line);
-    if (fields.length < 3) continue;
+    if (fields.length < 6) continue;
 
     const hcpcsCode = getCol(fields, headerMap, 'HCPCS')?.trim();
-    if (!hcpcsCode || !/^[A-Z0-9]{5}$/i.test(hcpcsCode)) continue;
+    if (!hcpcsCode) continue;
 
-    const rate = parseRate(getCol(fields, headerMap, 'RATE'));
-    if (rate === null || rate <= 0) {
+    const rateStr = getCol(fields, headerMap, 'RATE')?.trim();
+    const rate = parseRate(rateStr);
+    if (rate === null || rate === 0) {
       totalSkipped++;
       continue;
     }
 
     rates.push({
-      hcpcsCode: hcpcsCode.toUpperCase(),
+      hcpcsCode,
       modifier: getCol(fields, headerMap, 'MOD')?.trim() || null,
-      effDate: getCol(fields, headerMap, 'EFF_DATE')?.trim() || null,
-      indicator: getCol(fields, headerMap, 'INDICATOR')?.trim() || null,
       rate,
       shortDesc: getCol(fields, headerMap, 'SHORTDESC')?.trim() || null,
       longDesc: getCol(fields, headerMap, 'LONGDESC')?.trim() || null,
-      extendedDesc: getCol(fields, headerMap, 'EXTENDEDLONGDESC')?.trim() || null,
+      indicator: getCol(fields, headerMap, 'INDICATOR')?.trim() || null,
+      effectiveDate: getCol(fields, headerMap, 'EFF_DATE')?.trim() || null,
       effectiveYear,
     });
   }
@@ -100,7 +100,7 @@ function getCol(fields: string[], headerMap: Record<string, number>, colName: st
 function parseRate(value: string | null): number | null {
   if (!value) return null;
   const cleaned = value.replace(/[$,\s]/g, '').trim();
-  if (cleaned === '' || cleaned === '.') return null;
+  if (cleaned === '' || cleaned === '.' || cleaned === 'NA') return null;
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
 }
