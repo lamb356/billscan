@@ -1,0 +1,18 @@
+Average Sales Price Medicare Part B Drug Pricing File
+January 2026
+Effective January 1, 2026 through March 31, 2026
+This file contains ASP drug payment limits
+Centers for Medicare & Medicaid Services
+Data as of November 2025
+Prepared by CMS
+Note: Payment limits are ASP + 6%
+HCPCS Code,Short Description,HCPCS Code Dosage,Payment Limit,Co-Insurance Percentage,Vaccine AWP%,Vaccine Limit,Blood AWP%,Blood Limit,Clotting Factor,Notes
+J1100,DEXAMETHASONE SODIUM PHOS,1 MG,4.25,0.20,,,,,,
+J0696,CEFAZOLIN SODIUM,500 MG,3.12,0.20,,,,,,
+J2001,LIDOCAINE HCL,10 MG,1.85,0.20,,,,,,
+J3490,UNCLASSIFIED DRUGS,N/A,NA,,,,,,,Unclassified drug code
+J7030,NORMAL SALINE 1000 ML,1000 ML,0.48,0.20,,,,,,
+J2270,MORPHINE SULFATE,10 MG,12.50,0.20,,,,,,
+J0290,AMPICILLIN SODIUM,500 MG,5.75,0.20,,,,,,
+J0600,EDETATE CALCIUM DISODIUM,1000 MG,48.90,0.20,,,,,,
+INVALID,INVALID CODE,N/A,5.00,,,,,,,Not a valid HCPCS format
