@@ -1,20 +1,18 @@
 import { runAudit } from '../src/analyzer/audit.js';
 import { formatReportConsole } from '../src/output/report-builder.js';
-import { renderViralCard } from '../src/output/card-renderer.js';
 import { closeDb } from '../src/db/connection.js';
 
-const file = process.argv[2];
-if (!file) {
-  console.error('Usage: npx tsx scripts/run-audit.ts <bill-file>');
+const billPath = process.argv[2];
+if (!billPath) {
+  console.error('Usage: npx tsx scripts/run-audit.ts <bill.json>');
   process.exit(1);
 }
 
 try {
-  const report = await runAudit(file, { save: process.argv.includes('--save') });
-  console.log(formatReportConsole(report));
-  console.log(renderViralCard(report));
+  const report = await runAudit(billPath, { save: true });
+  console.log('\n' + formatReportConsole(report));
 } catch (err) {
-  console.error((err as Error).message);
+  console.error(`❌ ${(err as Error).message}`);
   process.exit(1);
 } finally {
   closeDb();
