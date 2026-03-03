@@ -5,3 +5,6 @@ data/
 *.db-journal
 *.db-wal
 .env
+push-result.txt
+package.json.full
+tool_calls/

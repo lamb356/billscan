@@ -1,140 +1,159 @@
-# BillScan 🏥
+# BillScan
 
-**AI Medical Bill Auditor** — Compare your medical bills against real CMS Medicare fee schedules to find overcharges.
+AI Medical Bill Auditor — Compare your medical bills against real CMS Medicare rates.
 
-**No fake data. No demo mode. Every rate pulled from cms.gov.**
+## What It Does
 
-![BillScan Audit Output](docs/audit-screenshot.png)
+BillScan extracts CPT codes and billed amounts from your medical bill, then matches each one against **4 federal CMS pricing databases**:
 
-## How It Works
+| Source | Description | Rates |
+|--------|------------|-------|
+| **PFS** | Physician Fee Schedule — facility & non-facility rates | 1,035,391 |
+| **CLFS** | Clinical Lab Fee Schedule — CBC, metabolic panels, venipuncture | 2,130 |
+| **ASP** | Average Sales Price — Part B injectable drugs (J-codes) | 876 |
+| **OPPS** | Outpatient PPS / APC — hospital outpatient department rates | 18,986 |
 
-1. BillScan downloads the official CMS Physician Fee Schedule (1,035,391 rate rows, 7,012 unique procedure codes)
-2. You provide your medical bill (JSON, PDF, or image)
-3. BillScan compares every charge against the CMS baseline
-4. You get a transparent audit report showing: what you were billed, what Medicare pays, the markup multiplier, and a dispute letter
+**Total: 1,057,383 real CMS rates from the 2026 fee schedules.**
 
-Every finding shows:
-- **Both rates**: facility AND non-facility CMS rates, always
-- **Match method**: exact code+modifier+locality, exact code+modifier, exact code only, or unmatched
-- **Transparency stamp**: report ID, input hash, CMS data hash, algorithm used
-- **Dispute tools**: auto-generated dispute letter and phone negotiation script
+## Core Principles
+
+- **NO FAKE DATA** — Every rate comes directly from official CMS sources
+- **Transparency** — Every report includes a cryptographic hash of the CMS data used
+- **BLAKE3 hashing** — Immutable audit trail for every bill and report
+
+## Installation
+
+```bash
+npm install
+```
 
 ## Quick Start
 
 ```bash
-# Install
-npm install
+# 1. Download all CMS data sources (one-time setup)
+npx tsx src/cli.ts fetch-all --year 2026
 
-# Download real CMS fee schedule data (~130MB, 1M+ rows)
-npx tsx scripts/import-chunk.ts init
-npx tsx scripts/import-chunk.ts chunk 0 200000 1
-npx tsx scripts/import-chunk.ts chunk 200000 200000 1
-# ... continue in 200K chunks until done
-npx tsx scripts/import-chunk.ts finalize 1
+# 2. Audit a bill
+npx tsx src/cli.ts audit ./fixtures/sample-er-bill.json
 
-# Or use the streaming pipeline (requires sufficient memory)
-npx tsx scripts/fetch-cms.ts --year 2026
-
-# Audit a bill
-npx tsx src/cli.ts audit ./fixtures/sample-er-bill.json --save --letter --phone --cards
-```
-
-## Example Output (real CMS 2026 rates)
-
-```
-┌─────┬────────┬──────────────────────────┬──────────┬───────────┬───────────┬──────────┬────────────┐
-│  #  │ CPT    │ Description              │  Billed  │ CMS Fac.  │ CMS NonF. │  Delta   │ Match      │
-├─────┼────────┼──────────────────────────┼──────────┼───────────┼───────────┼──────────┼────────────┤
-│   1 │ 99285  │ Emergency dept visit ... │   $2,847 │   $183.72 │   $183.72 │$2,663.28 │ exact      │
-│   2 │ 71046  │ Chest X-ray 2 views      │     $847 │    $43.76 │    $43.76 │  $803.24 │ exact      │
-│   3 │ 93000  │ Electrocardiogram com... │   $1,243 │    $19.22 │    $19.22 │$1,223.78 │ exact      │
-│   4 │ 99152  │ Moderate sedation sam... │     $823 │    $68.91 │    $11.92 │  $754.09 │ exact      │
-│   5 │ 99291  │ Critical care first 3... │   $3,250 │   $373.15 │   $218.21 │$2,876.85 │ exact      │
-│   6 │ 12001  │ Simple laceration rep... │   $1,485 │   $146.05 │    $47.62 │$1,338.95 │ exact      │
-│   7 │ 36415  │ Venipuncture blood draw  │     $189 │      N/A  │      N/A  │      N/A │ NONE       │
-└─────┴────────┴──────────────────────────┴──────────┴───────────┴───────────┴──────────┴────────────┘
-
-SUMMARY
-  Total Billed:       $11,474
-  CMS Baseline:       $834.81  (facility rates)
-  Potential Savings:  $10,639.19
-  Average Multiplier: 21.7x
-
-🔴 EXTREME  Electrocardiogram complete — billed $1,243 vs CMS $19.22 (64.7x)
-🔴 EXTREME  Chest X-ray 2 views       — billed $847   vs CMS $43.76 (19.4x)
-🔴 EXTREME  Emergency dept visit lv 5  — billed $2,847 vs CMS $183.72 (15.5x)
+# 3. Full audit with all outputs
+npx tsx src/cli.ts audit ./bill.json --save --letter --phone --cards --charity
 ```
 
 ## CLI Commands
 
+### Data Fetching
+
 ```bash
-# Download CMS data
-billscan fetch-cms [--year 2026] [--refresh]
+# Fetch all CMS sources (recommended)
+npx tsx src/cli.ts fetch-all --year 2026
 
-# Audit a bill
-billscan audit <file> [--save] [--letter] [--phone] [--json] [--cards] [--setting facility|office] [--locality CODE]
-
-# View aggregate stats
-billscan stats
+# Or fetch individually
+npx tsx src/cli.ts fetch-cms --year 2026    # Physician Fee Schedule
+npx tsx src/cli.ts fetch-clfs --year 2026   # Clinical Lab Fee Schedule  
+npx tsx src/cli.ts fetch-asp --year 2026    # Drug Average Sales Price
+npx tsx src/cli.ts fetch-opps --year 2026   # Outpatient PPS
 ```
 
-## Output Flags
+### Auditing
 
-| Flag | Description |
-|------|-------------|
-| `--save` | Persist audit to SQLite database |
-| `--letter` | Generate formal dispute letter |
-| `--phone` | Generate phone negotiation script |
-| `--cards` | Render viral summary card |
-| `--json` | Output raw JSON report |
-| `--setting` | Force `facility` or `office` rate context |
-| `--locality` | CMS locality code for geographic matching |
+```bash
+# Basic audit
+npx tsx src/cli.ts audit ./bill.json
 
-## Unmatched Codes
+# Full audit with all features
+npx tsx src/cli.ts audit ./bill.json \
+  --save          # Save to database \
+  --letter        # Generate dispute letter \
+  --phone         # Generate phone script \
+  --cards         # Show summary card \
+  --charity       # Check nonprofit/charity care \
+  --zip 90048     # Use ZIP for locality rates \
+  --setting facility  # Force facility context
 
-Some CPT/HCPCS codes are not in the CMS Physician Fee Schedule:
-- **Clinical lab codes** (80000-89999): Priced under the Clinical Lab Fee Schedule
-- **J-codes** (J0000-J9999): Drug codes priced under Medicare Part B drug pricing
-- **Revenue codes**: Facility-specific, not in PFS
+# Output as JSON
+npx tsx src/cli.ts audit ./bill.json --json
 
-BillScan marks these as `unmatched` — it never fabricates a rate.
-
-## Data Pipeline
-
-```
-CMS.gov → PFREV ZIP → Nested ZIPs → PFALL*.txt (130MB, 1M+ rows)
-    ↓
-Streaming CSV parser → SQLite (batch insert, 5K/txn)
-    ↓
-Rate matcher (4-tier: code+mod+loc → code+mod → code → unmatched)
-    ↓
-Audit report + dispute letter + phone script
+# Show aggregate stats
+npx tsx src/cli.ts stats
 ```
 
-## Tech Stack
-- TypeScript, Node.js 20+
-- SQLite (better-sqlite3) with WAL mode
-- BLAKE3 hashing (SHA-256 fallback) for tamper-evident audit trails
-- Real CMS Medicare Physician Fee Schedule data
-- Zod schemas for input validation
-- Handlebars templates for dispute output
-- Tesseract.js for bill image OCR
+## Bill Format
 
-## Project Structure
+JSON bills follow this schema:
+
+```json
+{
+  "facilityName": "Memorial General Hospital",
+  "facilityType": "er",
+  "serviceDate": "2026-01-15",
+  "totalBilled": 8947.50,
+  "lineItems": [
+    {
+      "lineNumber": 1,
+      "cptCode": "99285",
+      "description": "Emergency department visit, high complexity",
+      "billedAmount": 2850.00
+    },
+    {
+      "lineNumber": 2, 
+      "cptCode": "85025",
+      "description": "CBC with differential",
+      "billedAmount": 285.00
+    }
+  ]
+}
+```
+
+## CMS Data Sources
+
+| Source | URL | Coverage |
+|--------|-----|----------|
+| PFS | cms.gov/medicare/payment/fee-schedules/physician | All physician services |
+| CLFS | cms.gov/medicare/payment/fee-schedules/clinical-lab | Lab tests |
+| ASP | cms.gov/medicare/payment/fee-schedules/drugs | Part B drugs |
+| OPPS | cms.gov/medicare/payment/prospective-payment-system/hospital-outpatient | Hospital outpatient |
+
+## Output Example
+
+```
+═══════════════════════════════════════════════════════
+  BILLSCAN AUDIT REPORT
+═══════════════════════════════════════════════════════
+  Facility: Memorial General Hospital
+  Total Billed:        $8,947.50
+  CMS Baseline:        $1,203.42
+  Potential Savings:   $7,744.08
+  Lines Matched:       12
+  Lines Unmatched:     0
+  Avg Overcharge:      4.2x Medicare Rate
+
+  Data Sources: PFS, CLFS, ASP, OPPS
+  CMS Year: 2026
+```
+
+## Architecture
 
 ```
 src/
-├── schema/          # Zod schemas (bill, cms, finding, report, dispute)
-├── db/              # SQLite connection + migrations
-├── collector/       # CMS data fetcher, parser, importer
-├── parser/          # Bill parser (JSON, PDF, image/OCR)
-├── matcher/         # Rate matching engine (4-tier)
-├── analyzer/        # Audit engine
-├── output/          # Report builder, card renderer, stats
-├── dispute/         # Letter generator, phone script
-├── utils/           # BLAKE3/SHA-256 hashing
-└── cli.ts           # Commander CLI entry point
+  analyzer/     # Audit engine + charity care checker
+  collector/    # CMS fetchers + parsers for all 4 sources
+  db/           # SQLite connection + migrations
+  dispute/      # Letter + phone script generators
+  matcher/      # Multi-source rate matcher + ZIP locality
+  output/       # Report formatting + viral card renderer
+  parser/       # Bill file parser (JSON/PDF)
+  schema/       # Zod schemas for all types
+scripts/        # Data import utilities
+fixtures/       # Sample bills for testing
+templates/      # Handlebars templates
+web/            # Web frontend SPA
 ```
 
+## Web Frontend
+
+Open `web/index.html` in a browser for a visual bill auditor interface.
+
 ## License
+
 MIT
