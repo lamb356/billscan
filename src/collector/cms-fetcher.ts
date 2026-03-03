@@ -1,82 +1,138 @@
-import { mkdirSync, existsSync, createWriteStream } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, existsSync, createWriteStream, unlinkSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import AdmZip from 'adm-zip';
 
-const CMS_BASE = 'https://www.cms.gov/medicare/payment/fee-schedules/physician';
-const DATA_DIR = join(process.cwd(), 'data');
+const CMS_URL_PATTERNS = [
+  'https://www.cms.gov/files/zip/pfrev{YY}a-updated-12-29-{PREVYEAR}.zip',
+  'https://www.cms.gov/files/zip/pfrev{YY}b.zip',
+  'https://www.cms.gov/files/zip/pfrev{YY}a.zip',
+  'https://www.cms.gov/files/zip/pfrev{YY}d.zip',
+  'https://www.cms.gov/files/zip/pfrev{YY}c.zip',
+  'https://www.cms.gov/files/zip/pfall{YY}a.zip',
+];
 
-const CMS_URLS: Record<number, string> = {
-  2026: 'https://www.cms.gov/files/zip/2026-npimdfs-anwrvu.zip',
-  2025: 'https://www.cms.gov/files/zip/2025-npimdfs-anwrvu.zip',
-  2024: 'https://www.cms.gov/files/zip/2024-npimdfs.zip',
-};
-
-export interface FetchResult {
+interface FetchResult {
+  zipPath: string;
   csvPath: string;
   sourceUrl: string;
-  year: number;
 }
 
-export async function fetchCmsData(year: number, forceRefresh = false): Promise<FetchResult> {
-  mkdirSync(DATA_DIR, { recursive: true });
+export async function fetchCmsData(year: number, forceRefresh: boolean = false): Promise<FetchResult> {
+  const yy = String(year).slice(-2);
+  const prevYear = String(year - 1);
+  const downloadDir = resolve(process.cwd(), 'data', 'cms-downloads');
+  mkdirSync(downloadDir, { recursive: true });
 
-  const sourceUrl = CMS_URLS[year];
-  if (!sourceUrl) {
-    throw new Error(`No CMS URL configured for year ${year}. Supported: ${Object.keys(CMS_URLS).join(', ')}`);
+  const zipPath = resolve(downloadDir, `PFREV${yy}.zip`);
+
+  if (!forceRefresh && existsSync(zipPath)) {
+    console.log(`[cms-fetcher] Using cached ZIP: ${zipPath}`);
+    const csvPath = extractCsv(zipPath, downloadDir);
+    return { zipPath, csvPath, sourceUrl: 'cached' };
   }
 
-  const zipPath = join(DATA_DIR, `cms-pfs-${year}.zip`);
-  const csvPath = join(DATA_DIR, `cms-pfs-${year}.csv`);
+  const attemptedUrls: string[] = [];
+  for (const pattern of CMS_URL_PATTERNS) {
+    const url = pattern
+      .replace('{YY}', yy)
+      .replace('{yy}', yy)
+      .replace('{PREVYEAR}', prevYear);
+    attemptedUrls.push(url);
+    console.log(`[cms-fetcher] Trying: ${url}`);
 
-  // Return cached if available
-  if (!forceRefresh && existsSync(csvPath)) {
-    console.log(`[cms-fetcher] Using cached CSV: ${csvPath}`);
-    return { csvPath, sourceUrl, year };
+    try {
+      const response = await fetch(url, {
+        redirect: 'follow',
+        headers: { 'User-Agent': 'BillScan/0.1.0 (medical-bill-auditor)' },
+      });
+
+      if (!response.ok) {
+        console.log(`[cms-fetcher] ${response.status} from ${url}`);
+        continue;
+      }
+
+      if (response.body) {
+        const fileStream = createWriteStream(zipPath);
+        await pipeline(Readable.fromWeb(response.body as any), fileStream);
+
+        try {
+          const zipCheck = new AdmZip(zipPath);
+          const entries = zipCheck.getEntries();
+          if (entries.length === 0) {
+            console.log(`[cms-fetcher] Empty ZIP from ${url}`);
+            continue;
+          }
+          console.log(`[cms-fetcher] Downloaded from ${url} (${entries.length} files in ZIP)`);
+        } catch {
+          console.log(`[cms-fetcher] Invalid ZIP from ${url}`);
+          try { unlinkSync(zipPath); } catch {}
+          continue;
+        }
+
+        const csvPath = extractCsv(zipPath, downloadDir);
+        return { zipPath, csvPath, sourceUrl: url };
+      }
+    } catch (err) {
+      console.log(`[cms-fetcher] Error with ${url}: ${(err as Error).message}`);
+      continue;
+    }
   }
 
-  // Download ZIP
-  console.log(`[cms-fetcher] Downloading ${sourceUrl}...`);
-  const response = await fetch(sourceUrl);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText} from ${sourceUrl}`);
-  }
-
-  const writer = createWriteStream(zipPath);
-  await pipeline(Readable.fromWeb(response.body as any), writer);
-  console.log(`[cms-fetcher] Downloaded to ${zipPath}`);
-
-  // Extract CSV from ZIP
-  await extractCsvFromZip(zipPath, csvPath);
-  console.log(`[cms-fetcher] Extracted CSV to ${csvPath}`);
-
-  return { csvPath, sourceUrl, year };
+  throw new Error(
+    `[cms-fetcher] FAILED: Could not download CMS fee schedule from any URL.\n` +
+    `Attempted:\n${attemptedUrls.map(u => `  - ${u}`).join('\n')}\n\n` +
+    `Visit: https://www.cms.gov/medicare/payment/fee-schedules/physician`
+  );
 }
 
-async function extractCsvFromZip(zipPath: string, csvPath: string): Promise<void> {
-  // Use unzip via child_process
-  const { execSync } = await import('node:child_process');
-  const { readdirSync, renameSync, unlinkSync } = await import('node:fs');
-  const { join: pathJoin, extname } = await import('node:path');
+function extractCsv(zipPath: string, outputDir: string): string {
+  const zip = new AdmZip(zipPath);
+  const entries = zip.getEntries();
 
-  const tmpDir = zipPath + '_extracted';
-  mkdirSync(tmpDir, { recursive: true });
+  let textFiles = entries.filter(e =>
+    !e.isDirectory &&
+    (e.entryName.toLowerCase().endsWith('.csv') ||
+     e.entryName.toLowerCase().endsWith('.txt'))
+  );
 
-  execSync(`unzip -o "${zipPath}" -d "${tmpDir}"`, { stdio: 'pipe' });
-
-  // Find CSV file
-  const files = readdirSync(tmpDir);
-  const csvFile = files.find(f => extname(f).toLowerCase() === '.csv');
-
-  if (!csvFile) {
-    throw new Error(`No CSV file found in ZIP. Files: ${files.join(', ')}`);
+  if (textFiles.length > 0) {
+    const target = textFiles.sort((a, b) => b.header.size - a.header.size)[0];
+    const csvPath = resolve(outputDir, target.entryName.split('/').pop()!);
+    zip.extractEntryTo(target, outputDir, false, true);
+    console.log(`[cms-fetcher] Extracted: ${target.entryName} (${(target.header.size / 1024 / 1024).toFixed(1)}MB)`);
+    return csvPath;
   }
 
-  renameSync(pathJoin(tmpDir, csvFile), csvPath);
+  const nestedZips = entries.filter(e =>
+    !e.isDirectory && e.entryName.toLowerCase().endsWith('.zip')
+  );
 
-  // Cleanup
-  try {
-    execSync(`rm -rf "${tmpDir}"`, { stdio: 'pipe' });
-    unlinkSync(zipPath);
-  } catch { /* cleanup is best-effort */ }
+  if (nestedZips.length > 0) {
+    const nonQP = nestedZips.find(e => e.entryName.toLowerCase().includes('nonqp')) || nestedZips[0];
+    const nestedName = nonQP.entryName.split('/').pop()!;
+    const nestedZipPath = resolve(outputDir, nestedName);
+    zip.extractEntryTo(nonQP, outputDir, false, true);
+    console.log(`[cms-fetcher] Found nested ZIP: ${nonQP.entryName}`);
+
+    const innerZip = new AdmZip(nestedZipPath);
+    const innerEntries = innerZip.getEntries();
+
+    textFiles = innerEntries.filter(e =>
+      !e.isDirectory &&
+      (e.entryName.toLowerCase().endsWith('.csv') ||
+       e.entryName.toLowerCase().endsWith('.txt'))
+    );
+
+    if (textFiles.length > 0) {
+      const target = textFiles.sort((a, b) => b.header.size - a.header.size)[0];
+      const csvPath = resolve(outputDir, target.entryName.split('/').pop()!);
+      innerZip.extractEntryTo(target, outputDir, false, true);
+      console.log(`[cms-fetcher] Extracted: ${target.entryName} (${(target.header.size / 1024 / 1024).toFixed(1)}MB)`);
+      return csvPath;
+    }
+  }
+
+  throw new Error(`No CSV or TXT files found in ZIP (or nested ZIPs): ${zipPath}`);
 }
