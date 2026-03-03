@@ -1,231 +1,264 @@
 import { getDb } from '../db/connection.js';
+import type { MatchMode, Severity } from '../schema/finding.js';
 
-export type MatchMode = 'exact' | 'code+modifier' | 'code_only' | 'clfs' | 'asp' | 'opps' | 'unmatched';
-export type RateSource = 'PFS' | 'CLFS' | 'ASP' | 'OPPS';
-export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'fair';
-export type DisputeStrength = 'strong' | 'moderate' | 'weak';
+export type RateSource = 'pfs' | 'clfs' | 'asp' | 'opps';
 
 export interface MultiMatchResult {
-  matchMode: MatchMode;
-  rateSource: RateSource | null;
   facilityRate: number | null;
   nonFacilityRate: number | null;
   cmsRateUsed: number | null;
+  matchMode: MatchMode;
+  rateSource: RateSource | null;
+  severity: Severity | null;
+  disputeStrength: 'strong' | 'moderate' | 'weak' | 'none';
+  locality: string | null;
   description: string | null;
-  localityUsed: string | null;
   apc: string | null;
+  statusIndicator: string | null;
   dosage: string | null;
 }
 
-/**
- * Match a CPT/HCPCS code against all available CMS data sources.
- * Priority order:
- * 1. PFS (Physician Fee Schedule) - most specific for physician services
- * 2. CLFS (Clinical Lab Fee Schedule) - lab codes
- * 3. ASP (Average Sales Price) - drug codes (J-codes)
- * 4. OPPS (Outpatient PPS) - hospital outpatient codes
- */
 export function matchRateMulti(
-  code: string,
-  modifier: string | undefined,
-  rateContext: 'facility' | 'non_facility',
+  cptCode: string,
+  modifier?: string,
+  rateContext: 'facility' | 'non_facility' = 'facility',
   locality?: string,
 ): MultiMatchResult {
   const db = getDb();
+  const code = cptCode.trim().toUpperCase();
 
-  // ── 1. PFS: Try exact match (code + modifier + locality) ──────────────────
-  if (locality && modifier) {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ? AND modifier = ? AND locality_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code, modifier, locality) as any;
+  const isJCode = code.startsWith('J');
+  const isLabCode = isLabHcpcs(code);
 
-    if (row) {
-      return buildPfsResult('exact', row, rateContext, locality);
-    }
+  if (isJCode) {
+    const asp = matchFromAsp(db, code);
+    if (asp) return asp;
   }
 
-  // ── 2. PFS: code + modifier (any locality) ───────────────────────────────
-  if (modifier) {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ? AND modifier = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code, modifier) as any;
-
-    if (row) {
-      return buildPfsResult('code+modifier', row, rateContext, null);
-    }
+  if (isLabCode) {
+    const clfs = matchFromClfs(db, code, modifier);
+    if (clfs) return clfs;
   }
 
-  // ── 3. PFS: code only (locality match) ───────────────────────────────────
-  if (locality) {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ? AND locality_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code, locality) as any;
+  const pfs = matchFromPfs(db, code, modifier, rateContext, locality);
+  if (pfs) return pfs;
 
-    if (row) {
-      return buildPfsResult('code_only', row, rateContext, locality);
-    }
+  if (rateContext === 'facility') {
+    const opps = matchFromOpps(db, code);
+    if (opps) return opps;
   }
 
-  // ── 4. PFS: code only (no locality) ──────────────────────────────────────
-  {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code) as any;
-
-    if (row) {
-      return buildPfsResult('code_only', row, rateContext, null);
-    }
+  if (!isLabCode) {
+    const clfs = matchFromClfs(db, code, modifier);
+    if (clfs) return clfs;
+  }
+  if (!isJCode) {
+    const asp = matchFromAsp(db, code);
+    if (asp) return asp;
+  }
+  if (rateContext !== 'facility') {
+    const opps = matchFromOpps(db, code);
+    if (opps) return opps;
   }
 
-  // ── 5. CLFS: Clinical Lab Fee Schedule ───────────────────────────────────
-  {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, rate, short_desc
-      FROM clfs_rates
-      WHERE hcpcs_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code) as any;
+  return unmatchedResult();
+}
 
-    if (row) {
-      return {
-        matchMode: 'clfs',
-        rateSource: 'CLFS',
-        facilityRate: row.rate,
-        nonFacilityRate: row.rate,
-        cmsRateUsed: row.rate,
-        description: row.short_desc || null,
-        localityUsed: null,
-        apc: null,
-        dosage: null,
-      };
-    }
-  }
+function isLabHcpcs(code: string): boolean {
+  const num = parseInt(code, 10);
+  if (!isNaN(num) && ((num >= 80000 && num <= 89999) || code === '36415')) return true;
+  if (/^\d{4}U$/.test(code)) return true;
+  return false;
+}
 
-  // ── 6. ASP: Average Sales Price (drug codes) ─────────────────────────────
-  {
-    const row = db.prepare(`
-      SELECT hcpcs_code, payment_limit, short_desc, dosage
-      FROM asp_rates
-      WHERE hcpcs_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code) as any;
+function matchFromPfs(
+  db: ReturnType<typeof getDb>,
+  code: string,
+  modifier: string | undefined,
+  rateContext: 'facility' | 'non_facility',
+  locality: string | undefined,
+): MultiMatchResult | null {
+  const latest = db.prepare(
+    'SELECT id FROM cms_snapshots ORDER BY effective_year DESC, fetched_at DESC LIMIT 1'
+  ).get() as { id: number } | undefined;
+  if (!latest) return null;
 
-    if (row) {
-      return {
-        matchMode: 'asp',
-        rateSource: 'ASP',
-        facilityRate: row.payment_limit,
-        nonFacilityRate: row.payment_limit,
-        cmsRateUsed: row.payment_limit,
-        description: row.short_desc || null,
-        localityUsed: null,
-        apc: null,
-        dosage: row.dosage || null,
-      };
-    }
-  }
+  let sql = `SELECT facility_rate, non_facility_rate, locality, description FROM cms_rates WHERE snapshot_id = ? AND cpt_code = ?`;
+  const params: any[] = [latest.id, code];
 
-  // ── 7. OPPS: Outpatient PPS / APC ────────────────────────────────────────
-  {
-    const row = db.prepare(`
-      SELECT hcpcs_code, payment_rate, short_desc, apc
-      FROM opps_rates
-      WHERE hcpcs_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code) as any;
+  if (modifier) { sql += ` AND (modifier = ? OR modifier IS NULL)`; params.push(modifier); }
+  if (locality) { sql += ` AND (locality = ? OR locality IS NULL)`; params.push(locality); }
 
-    if (row) {
-      return {
-        matchMode: 'opps',
-        rateSource: 'OPPS',
-        facilityRate: row.payment_rate,
-        nonFacilityRate: row.payment_rate,
-        cmsRateUsed: row.payment_rate,
-        description: row.short_desc || null,
-        localityUsed: null,
-        apc: row.apc || null,
-        dosage: null,
-      };
-    }
-  }
+  sql += ` ORDER BY
+    CASE WHEN facility_rate IS NOT NULL AND facility_rate > 0 THEN 0 ELSE 1 END,
+    CASE WHEN non_facility_rate IS NOT NULL AND non_facility_rate > 0 THEN 0 ELSE 1 END
+    LIMIT 1`;
 
-  // ── 8. Unmatched ─────────────────────────────────────────────────────────
+  const row = db.prepare(sql).get(...params) as {
+    facility_rate: number | null;
+    non_facility_rate: number | null;
+    locality: string | null;
+    description: string | null;
+  } | undefined;
+
+  if (!row) return null;
+  if ((row.facility_rate === null || row.facility_rate === 0) && (row.non_facility_rate === null || row.non_facility_rate === 0)) return null;
+
+  const matchMode: MatchMode = modifier && locality
+    ? 'exact_code_modifier_locality'
+    : modifier ? 'exact_code_modifier'
+    : 'exact_code_only';
+
+  const cmsRateUsed = rateContext === 'facility'
+    ? (row.facility_rate ?? row.non_facility_rate)
+    : (row.non_facility_rate ?? row.facility_rate);
+
   return {
-    matchMode: 'unmatched',
-    rateSource: null,
-    facilityRate: null,
-    nonFacilityRate: null,
-    cmsRateUsed: null,
-    description: null,
-    localityUsed: null,
+    facilityRate: row.facility_rate,
+    nonFacilityRate: row.non_facility_rate,
+    cmsRateUsed,
+    matchMode,
+    rateSource: 'pfs',
+    severity: null,
+    disputeStrength: 'none',
+    locality: row.locality,
+    description: row.description,
     apc: null,
+    statusIndicator: null,
     dosage: null,
   };
 }
 
-function buildPfsResult(
-  mode: MatchMode,
-  row: any,
-  rateContext: 'facility' | 'non_facility',
-  localityUsed: string | null,
-): MultiMatchResult {
-  const facilityRate = row.facility_rate ?? null;
-  const nonFacilityRate = row.non_facility_rate ?? null;
-  const cmsRateUsed = rateContext === 'facility' ? facilityRate : nonFacilityRate;
+function matchFromClfs(
+  db: ReturnType<typeof getDb>,
+  code: string,
+  modifier: string | undefined,
+): MultiMatchResult | null {
+  let sql = `SELECT rate, short_desc, long_desc, modifier FROM clfs_rates WHERE hcpcs_code = ?`;
+  const params: any[] = [code];
+
+  if (modifier) { sql += ` AND (modifier = ? OR modifier IS NULL OR modifier = '')`; params.push(modifier); }
+  sql += ` ORDER BY rate DESC LIMIT 1`;
+
+  const row = db.prepare(sql).get(...params) as {
+    rate: number | null;
+    short_desc: string | null;
+    long_desc: string | null;
+    modifier: string | null;
+  } | undefined;
+
+  if (!row || row.rate === null || row.rate === 0) return null;
 
   return {
-    matchMode: mode,
-    rateSource: 'PFS',
-    facilityRate,
-    nonFacilityRate,
-    cmsRateUsed: cmsRateUsed ?? facilityRate ?? nonFacilityRate,
-    description: row.description || null,
-    localityUsed,
+    facilityRate: row.rate,
+    nonFacilityRate: row.rate,
+    cmsRateUsed: row.rate,
+    matchMode: modifier && row.modifier ? 'exact_code_modifier' : 'exact_code_only',
+    rateSource: 'clfs',
+    severity: null,
+    disputeStrength: 'none',
+    locality: null,
+    description: row.short_desc || row.long_desc,
     apc: null,
+    statusIndicator: null,
+    dosage: null,
+  };
+}
+
+function matchFromAsp(
+  db: ReturnType<typeof getDb>,
+  code: string,
+): MultiMatchResult | null {
+  const row = db.prepare(
+    `SELECT payment_limit, short_desc, dosage FROM asp_rates WHERE hcpcs_code = ? ORDER BY payment_limit DESC LIMIT 1`
+  ).get(code) as {
+    payment_limit: number | null;
+    short_desc: string | null;
+    dosage: string | null;
+  } | undefined;
+
+  if (!row || row.payment_limit === null) return null;
+
+  return {
+    facilityRate: row.payment_limit,
+    nonFacilityRate: row.payment_limit,
+    cmsRateUsed: row.payment_limit,
+    matchMode: 'exact_code_only',
+    rateSource: 'asp',
+    severity: null,
+    disputeStrength: 'none',
+    locality: null,
+    description: row.short_desc,
+    apc: null,
+    statusIndicator: null,
+    dosage: row.dosage,
+  };
+}
+
+function matchFromOpps(
+  db: ReturnType<typeof getDb>,
+  code: string,
+): MultiMatchResult | null {
+  const row = db.prepare(
+    `SELECT payment_rate, short_desc, status_indicator, apc FROM opps_rates WHERE hcpcs_code = ? AND payment_rate IS NOT NULL AND payment_rate > 0 ORDER BY payment_rate DESC LIMIT 1`
+  ).get(code) as {
+    payment_rate: number | null;
+    short_desc: string | null;
+    status_indicator: string | null;
+    apc: string | null;
+  } | undefined;
+
+  if (!row || row.payment_rate === null) return null;
+
+  return {
+    facilityRate: row.payment_rate,
+    nonFacilityRate: null,
+    cmsRateUsed: row.payment_rate,
+    matchMode: 'exact_code_only',
+    rateSource: 'opps',
+    severity: null,
+    disputeStrength: 'none',
+    locality: null,
+    description: row.short_desc,
+    apc: row.apc,
+    statusIndicator: row.status_indicator,
+    dosage: null,
+  };
+}
+
+function unmatchedResult(): MultiMatchResult {
+  return {
+    facilityRate: null,
+    nonFacilityRate: null,
+    cmsRateUsed: null,
+    matchMode: 'unmatched',
+    rateSource: null,
+    severity: null,
+    disputeStrength: 'none',
+    locality: null,
+    description: null,
+    apc: null,
+    statusIndicator: null,
     dosage: null,
   };
 }
 
 export function calculateSeverity(multiplier: number): Severity {
-  if (multiplier >= 5) return 'critical';
-  if (multiplier >= 3) return 'high';
-  if (multiplier >= 2) return 'medium';
-  if (multiplier >= 1.2) return 'low';
-  return 'fair';
+  if (multiplier > 10) return 'extreme';
+  if (multiplier > 5) return 'high';
+  if (multiplier > 2) return 'medium';
+  return 'low';
 }
 
 export function calculateDisputeStrength(
   matchMode: MatchMode,
   rateSource: RateSource | null,
   multiplier: number | null,
-): DisputeStrength {
-  if (!multiplier || multiplier < 1.1) return 'weak';
-
-  // Exact matches with high multipliers are strongest
-  if (matchMode === 'exact' && multiplier >= 2) return 'strong';
-  if (matchMode === 'clfs' && multiplier >= 2) return 'strong';
-  if (matchMode === 'asp' && multiplier >= 1.5) return 'strong';
-  if (matchMode === 'opps' && multiplier >= 1.5) return 'strong';
-
-  if (multiplier >= 1.5) return 'moderate';
+): 'strong' | 'moderate' | 'weak' | 'none' {
+  if (matchMode === 'unmatched' || multiplier === null) return 'none';
+  const isExact = matchMode.startsWith('exact_code');
+  const sourceBonus = rateSource === 'pfs' || rateSource === 'clfs' ? 0.5 : 0;
+  if (isExact && multiplier > (3 - sourceBonus)) return 'strong';
+  if (isExact && multiplier > (2 - sourceBonus)) return 'moderate';
   return 'weak';
 }

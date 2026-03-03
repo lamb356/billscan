@@ -1,120 +1,128 @@
 import { getDb } from '../db/connection.js';
-
-export type MatchMode = 'exact' | 'code+modifier' | 'code_only' | 'unmatched';
-export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'fair';
+import type { MatchMode, Severity } from '../schema/finding.js';
 
 export interface MatchResult {
-  matchMode: MatchMode;
   facilityRate: number | null;
   nonFacilityRate: number | null;
   cmsRateUsed: number | null;
+  matchMode: MatchMode;
+  severity: Severity | null;
+  disputeStrength: 'strong' | 'moderate' | 'weak' | 'none';
+  locality: string | null;
   description: string | null;
-  localityUsed: string | null;
 }
 
 export function matchRate(
-  code: string,
-  modifier: string | undefined,
-  rateContext: 'facility' | 'non_facility',
+  cptCode: string,
+  modifier?: string,
+  rateContext: 'facility' | 'non_facility' = 'facility',
   locality?: string,
+  snapshotId?: number,
 ): MatchResult {
   const db = getDb();
 
-  // 1. Exact match: code + modifier + locality
-  if (locality && modifier) {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ? AND modifier = ? AND locality_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code, modifier, locality) as any;
-
-    if (row) {
-      return buildResult('exact', row, rateContext, locality);
-    }
+  if (!snapshotId) {
+    const latest = db.prepare(
+      'SELECT id FROM cms_snapshots ORDER BY effective_year DESC, fetched_at DESC LIMIT 1'
+    ).get() as { id: number } | undefined;
+    if (!latest) return unmatchedResult();
+    snapshotId = latest.id;
   }
 
-  // 2. code + modifier (any locality)
+  if (modifier && locality) {
+    const row = queryRate(db, snapshotId, cptCode, modifier, locality);
+    if (row) return buildResult(row, 'exact_code_modifier_locality', rateContext);
+  }
+
   if (modifier) {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ? AND modifier = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code, modifier) as any;
-
-    if (row) {
-      return buildResult('code+modifier', row, rateContext, null);
-    }
+    const row = queryRate(db, snapshotId, cptCode, modifier, null);
+    if (row) return buildResult(row, 'exact_code_modifier', rateContext);
   }
 
-  // 3. code only (with locality)
-  if (locality) {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ? AND locality_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code, locality) as any;
-
-    if (row) {
-      return buildResult('code_only', row, rateContext, locality);
-    }
-  }
-
-  // 4. code only (no locality)
   {
-    const row = db.prepare(`
-      SELECT hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code
-      FROM cms_rates
-      WHERE hcpcs_code = ?
-      ORDER BY effective_year DESC
-      LIMIT 1
-    `).get(code) as any;
-
-    if (row) {
-      return buildResult('code_only', row, rateContext, null);
-    }
+    const row = queryRate(db, snapshotId, cptCode, null, null);
+    if (row) return buildResult(row, 'exact_code_only', rateContext);
   }
 
-  // 5. Unmatched
-  return {
-    matchMode: 'unmatched',
-    facilityRate: null,
-    nonFacilityRate: null,
-    cmsRateUsed: null,
-    description: null,
-    localityUsed: null,
-  };
+  return unmatchedResult();
+}
+
+interface RateRow {
+  facility_rate: number | null;
+  non_facility_rate: number | null;
+  locality: string | null;
+  description: string | null;
+}
+
+function queryRate(
+  db: ReturnType<typeof getDb>,
+  snapshotId: number,
+  cptCode: string,
+  modifier: string | null,
+  locality: string | null,
+): RateRow | null {
+  let sql = `SELECT facility_rate, non_facility_rate, locality, description FROM cms_rates WHERE snapshot_id = ? AND cpt_code = ?`;
+  const params: any[] = [snapshotId, cptCode];
+
+  if (modifier !== null) { sql += ` AND (modifier = ? OR modifier IS NULL)`; params.push(modifier); }
+  if (locality !== null) { sql += ` AND (locality = ? OR locality IS NULL)`; params.push(locality); }
+
+  sql += ` ORDER BY
+    CASE WHEN facility_rate IS NOT NULL AND facility_rate > 0 THEN 0 ELSE 1 END,
+    CASE WHEN non_facility_rate IS NOT NULL AND non_facility_rate > 0 THEN 0 ELSE 1 END
+    LIMIT 1`;
+
+  return db.prepare(sql).get(...params) as RateRow | null;
 }
 
 function buildResult(
-  mode: MatchMode,
-  row: any,
+  row: RateRow,
+  matchMode: MatchMode,
   rateContext: 'facility' | 'non_facility',
-  localityUsed: string | null,
 ): MatchResult {
-  const facilityRate = row.facility_rate ?? null;
-  const nonFacilityRate = row.non_facility_rate ?? null;
-  const cmsRateUsed = rateContext === 'facility' ? facilityRate : nonFacilityRate;
+  const cmsRateUsed = rateContext === 'facility'
+    ? (row.facility_rate ?? row.non_facility_rate)
+    : (row.non_facility_rate ?? row.facility_rate);
 
   return {
-    matchMode: mode,
-    facilityRate,
-    nonFacilityRate,
-    cmsRateUsed: cmsRateUsed ?? facilityRate ?? nonFacilityRate,
-    description: row.description || null,
-    localityUsed,
+    facilityRate: row.facility_rate,
+    nonFacilityRate: row.non_facility_rate,
+    cmsRateUsed,
+    matchMode,
+    severity: null,
+    disputeStrength: 'none',
+    locality: row.locality,
+    description: row.description,
+  };
+}
+
+function unmatchedResult(): MatchResult {
+  return {
+    facilityRate: null,
+    nonFacilityRate: null,
+    cmsRateUsed: null,
+    matchMode: 'unmatched',
+    severity: null,
+    disputeStrength: 'none',
+    locality: null,
+    description: null,
   };
 }
 
 export function calculateSeverity(multiplier: number): Severity {
-  if (multiplier >= 5) return 'critical';
-  if (multiplier >= 3) return 'high';
-  if (multiplier >= 2) return 'medium';
-  if (multiplier >= 1.2) return 'low';
-  return 'fair';
+  if (multiplier > 10) return 'extreme';
+  if (multiplier > 5) return 'high';
+  if (multiplier > 2) return 'medium';
+  return 'low';
+}
+
+export function calculateDisputeStrength(
+  matchMode: MatchMode,
+  multiplier: number | null,
+): 'strong' | 'moderate' | 'weak' | 'none' {
+  if (matchMode === 'unmatched' || multiplier === null) return 'none';
+  const isExact = matchMode === 'exact_code_modifier_locality' || matchMode === 'exact_code_modifier';
+  if (isExact && multiplier > 3) return 'strong';
+  if (isExact && multiplier > 2) return 'moderate';
+  return 'weak';
 }
