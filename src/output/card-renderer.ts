@@ -1,26 +1,21 @@
 import type { AuditReport } from '../schema/report.js';
 
 export function renderViralCard(report: AuditReport): string {
-  const worst = report.summary.topOvercharges[0];
-  const worstLine = worst
-    ? `${worst.description.slice(0, 28)} — $${worst.billedAmount.toLocaleString()} vs $${worst.cmsRate.toFixed(2)} (${(worst.billedAmount / worst.cmsRate).toFixed(0)}x!)`
-    : 'No overcharges found';
+  const savings = report.totalPotentialSavings;
+  const multiplier = report.summary.averageMultiplier;
 
-  const card = [
-    '┌─────────────────────────────────────────┐',
-    '│  🏥 YOUR ER BILL                        │',
-    '│                                         │',
-    `│  Billed:     $${report.totalBilled.toLocaleString().padEnd(25)}│`,
-    `│  Fair Price: $${report.totalCmsBaseline.toLocaleString().padEnd(25)}│`,
-    `│  Overcharge: $${report.totalPotentialSavings.toLocaleString().padEnd(25)}│`,
-    '│                                         │',
-    '│  Worst offender:                        │',
-    `│  ${worstLine.slice(0, 39).padEnd(39)}│`,
-    '│                                         │',
-    `│  Source: CMS.gov ${report.stamp.cmsEffectiveYear} rates${' '.repeat(15)}│`,
-    `│  billscan.dev/verify/${report.stamp.reportId.slice(0, 8).padEnd(12)}│`,
-    '└─────────────────────────────────────────┘',
+  const lines = [
+    '┌────────────────────────────────────────┐',
+    `│  MEDICAL BILL AUDIT RESULTS            │`,
+    '├────────────────────────────────────────┤',
+    `│  Billed:     $${report.totalBilled.toFixed(2).padStart(10)}              │`,
+    `│  CMS Rate:   $${report.totalCmsBaseline.toFixed(2).padStart(10)}              │`,
+    `│  You Save:   $${savings.toFixed(2).padStart(10)}              │`,
+    '├────────────────────────────────────────┤',
+    `│  Matched: ${report.matchedLineCount} lines  Unmatched: ${report.unmatchedLineCount} lines  │`,
+    multiplier ? `│  Avg Overcharge: ${multiplier}x Medicare Rate        │` : '│                                        │',
+    '└────────────────────────────────────────┘',
   ];
 
-  return card.join('\n');
+  return lines.join('\n');
 }

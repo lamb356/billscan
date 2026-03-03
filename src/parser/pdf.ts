@@ -1,17 +1,8 @@
 import { readFileSync } from 'node:fs';
 
-interface PdfResult {
-  text: string;
-  pageCount: number;
-}
-
-export async function parsePdf(pdfPath: string): Promise<PdfResult> {
-  const { PDFParse } = await import('pdf-parse');
+export async function extractPdfText(pdfPath: string): Promise<string> {
+  const { default: pdfParse } = await import('pdf-parse');
   const buffer = readFileSync(pdfPath);
-  const pdf = new PDFParse({ data: new Uint8Array(buffer) });
-  const textResult = await pdf.getText();
-  return {
-    text: textResult.pages.map((p: any) => p.text || '').join('\n'),
-    pageCount: textResult.pages.length,
-  };
+  const data = await pdfParse(buffer);
+  return data.text;
 }

@@ -8,9 +8,8 @@ async function loadBlake3() {
   if (blake3LoadAttempted) return blake3Module;
   blake3LoadAttempted = true;
   try {
-    blake3Module = await import('blake3' as string);
+    blake3Module = await import('blake3');
   } catch {
-    console.warn('[hash] BLAKE3 not available, falling back to SHA-256');
     blake3Module = null;
   }
   return blake3Module;
@@ -18,32 +17,31 @@ async function loadBlake3() {
 
 export async function hash(data: Buffer | string): Promise<string> {
   const b3 = await loadBlake3();
-  const buf = typeof data === 'string' ? Buffer.from(data) : data;
   if (b3) {
-    const result = b3.hash(buf);
-    return `blake3:${Buffer.from(result).toString('hex')}`;
+    const h = b3.createHash();
+    h.update(typeof data === 'string' ? Buffer.from(data) : data);
+    return 'blake3:' + h.digest('hex');
   }
-  return `sha256:${createHash('sha256').update(buf).digest('hex')}`;
+  // Fallback to SHA-256
+  return 'sha256:' + createHash('sha256').update(data).digest('hex');
 }
 
 export async function hashFile(filePath: string): Promise<string> {
   const b3 = await loadBlake3();
-  return new Promise((resolve, reject) => {
+  if (b3) {
+    const h = b3.createHash();
     const stream = createReadStream(filePath);
-    if (b3) {
-      const hasher = b3.createHash();
-      stream.on('data', (chunk: Buffer) => hasher.update(chunk));
-      stream.on('end', () => resolve(`blake3:${Buffer.from(hasher.digest()).toString('hex')}`));
-      stream.on('error', reject);
-    } else {
-      const sha = createHash('sha256');
-      stream.on('data', (chunk: Buffer) => sha.update(chunk));
-      stream.on('end', () => resolve(`sha256:${sha.digest('hex')}`));
-      stream.on('error', reject);
+    for await (const chunk of stream) {
+      h.update(chunk);
     }
+    return 'blake3:' + h.digest('hex');
+  }
+  // Fallback
+  return new Promise((resolve, reject) => {
+    const h = createHash('sha256');
+    const stream = createReadStream(filePath);
+    stream.on('data', chunk => h.update(chunk));
+    stream.on('end', () => resolve('sha256:' + h.digest('hex')));
+    stream.on('error', reject);
   });
-}
-
-export function getAlgorithm(hashString: string): string {
-  return hashString.split(':')[0];
 }

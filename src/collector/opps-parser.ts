@@ -1,27 +1,34 @@
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { CMSRateSchema } from '../schema/cms.js';
 import { hashFile } from '../utils/hash.js';
-import type { CMSRate } from '../schema/cms.js';
 
 /**
- * CMS PFS CSV column indices (2024-2026 format)
- * The file has a preamble header section before the actual data header row.
- * We detect the real header by looking for 'HCPCS' in the row.
+ * OPPS Addendum B CSV format (CY 2026):
+ * Header row: HCPCS Code,Short Descriptor,APC,SI,Relative Weight,Payment Rate,...
  */
 
-const EXPECTED_HEADERS = ['HCPCS', 'MOD', 'PAR FAC PE RVU'];
+export interface OPPSRate {
+  hcpcsCode: string;
+  shortDesc: string | null;
+  apc: string | null;
+  si: string | null;
+  relativeWeight: number | null;
+  paymentRate: number;
+  minUnadjusted: number | null;
+  notes: string | null;
+  effectiveYear: number;
+}
 
-interface ParseResult {
-  rates: CMSRate[];
+interface OPPSParseResult {
+  rates: OPPSRate[];
   rawHash: string;
   totalParsed: number;
   totalSkipped: number;
 }
 
-export async function parseCmsCsv(csvPath: string, effectiveYear: number): Promise<ParseResult> {
+export async function parseOppsCsv(csvPath: string, effectiveYear: number): Promise<OPPSParseResult> {
   const rawHash = await hashFile(csvPath);
-  const rates: CMSRate[] = [];
+  const rates: OPPSRate[] = [];
   let headerFound = false;
   let headerMap: Record<string, number> = {};
   let totalSkipped = 0;
@@ -36,59 +43,48 @@ export async function parseCmsCsv(csvPath: string, effectiveYear: number): Promi
     lineNum++;
     if (!line.trim()) continue;
 
-    // Look for the actual header row
     if (!headerFound) {
       const upper = line.toUpperCase();
-      const isHeader = EXPECTED_HEADERS.every(h => upper.includes(h));
-      if (isHeader) {
+      if (upper.includes('HCPCS') && upper.includes('PAYMENT RATE')) {
         const cols = parseCsvLine(line);
         for (let i = 0; i < cols.length; i++) {
           headerMap[cols[i].trim().toUpperCase()] = i;
         }
         headerFound = true;
-        console.log(`[cms-parser] Header found at line ${lineNum}: ${cols.length} columns`);
+        console.log(`[opps-parser] Header found at line ${lineNum}: ${cols.length} columns`);
         continue;
       }
       continue;
     }
 
     const fields = parseCsvLine(line);
-    if (fields.length < 5) continue;
+    if (fields.length < 4) continue;
 
-    const hcpcsCode = getCol(fields, headerMap, 'HCPCS')?.trim();
+    const hcpcsCode = getCol(fields, headerMap, 'HCPCS CODE')?.trim();
     if (!hcpcsCode || !/^[A-Z0-9]{5}$/i.test(hcpcsCode)) continue;
 
-    const facilityRate = parseRate(getCol(fields, headerMap, 'PAR FAC PE RVU'));
-    const nonFacilityRate = parseRate(getCol(fields, headerMap, 'PAR NFAC PE RVU'));
-
-    if (facilityRate === null && nonFacilityRate === null) {
+    const paymentRate = parseRate(getCol(fields, headerMap, 'PAYMENT RATE'));
+    if (paymentRate === null || paymentRate <= 0) {
       totalSkipped++;
       continue;
     }
 
-    const rawRate = {
+    rates.push({
       hcpcsCode: hcpcsCode.toUpperCase(),
-      modifier: getCol(fields, headerMap, 'MOD')?.trim() || undefined,
-      description: getCol(fields, headerMap, 'DESCRIPTION')?.trim() || undefined,
-      facilityRate: facilityRate ?? undefined,
-      nonFacilityRate: nonFacilityRate ?? undefined,
-      localityCode: getCol(fields, headerMap, 'LOCALITY NUMBER')?.trim() || undefined,
-      statusCode: getCol(fields, headerMap, 'STATUS CODE')?.trim() || undefined,
+      shortDesc: getCol(fields, headerMap, 'SHORT DESCRIPTOR')?.trim() || null,
+      apc: getCol(fields, headerMap, 'APC')?.trim() || null,
+      si: getCol(fields, headerMap, 'SI')?.trim() || null,
+      relativeWeight: parseRate(getCol(fields, headerMap, 'RELATIVE WEIGHT')),
+      paymentRate,
+      minUnadjusted: parseRate(getCol(fields, headerMap, 'MIN UNADJUSTED COPAYMENT')),
+      notes: getCol(fields, headerMap, 'NOTES')?.trim() || null,
       effectiveYear,
-    };
-
-    try {
-      const validated = CMSRateSchema.parse(rawRate);
-      rates.push(validated);
-    } catch {
-      totalSkipped++;
-    }
+    });
   }
 
-  console.log(`[cms-parser] Done: ${rates.length} rates parsed (skipped ${totalSkipped})`);
-
+  console.log(`[opps-parser] Done: ${rates.length} rates parsed (skipped ${totalSkipped} zero-rate rows)`);
   if (rates.length === 0) {
-    throw new Error(`[cms-parser] No valid rates parsed from ${csvPath}. Check file format.`);
+    throw new Error(`[opps-parser] No valid rates parsed from ${csvPath}`);
   }
 
   return { rates, rawHash, totalParsed: rates.length, totalSkipped };
@@ -112,7 +108,6 @@ function parseCsvLine(line: string): string[] {
   const fields: string[] = [];
   let pos = 0;
   const len = line.length;
-
   while (pos <= len) {
     if (pos < len && line[pos] === '"') {
       let end = pos + 1;
@@ -138,6 +133,5 @@ function parseCsvLine(line: string): string[] {
       pos = comma + 1;
     }
   }
-
   return fields;
 }
