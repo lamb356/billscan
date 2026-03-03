@@ -1,165 +1,11 @@
 // Chunked import — processes N lines at a time from a given offset
-// Usage: npx tsx scripts/import-chunk.ts --offset=0 --limit=100000 --year=2026
-
+// Usage: npx tsx scripts/import-chunk.ts <offset> <limit>
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { join } from 'node:path';
-import { getDb, closeDb } from '../src/db/connection.js';
-import { hashFile } from '../src/utils/hash.js';
-import { CMSRateSchema } from '../src/schema/cms.js';
-import type { CMSRate } from '../src/schema/cms.js';
-
-const args = Object.fromEntries(
-  process.argv.slice(2).map(a => a.replace('--', '').split('='))
-);
-
-const OFFSET = parseInt(args.offset ?? '0');
-const LIMIT = parseInt(args.limit ?? '100000');
-const YEAR = parseInt(args.year ?? '2026');
-const FORCE = args.force === 'true';
-const DATA_DIR = join(process.cwd(), 'data');
-const CSV_PATH = join(DATA_DIR, `cms-pfs-${YEAR}.csv`);
-const SOURCE_URL = `https://www.cms.gov/files/zip/${YEAR}-npimdfs-anwrvu.zip`;
-
-console.log(`\n=== BillScan Chunked Importer ===`);
-console.log(`CSV: ${CSV_PATH}`);
-console.log(`Offset: ${OFFSET} | Limit: ${LIMIT} | Year: ${YEAR}\n`);
-
-const EXPECTED_HEADERS = ['HCPCS', 'MOD', 'PAR FAC PE RVU'];
-
-async function importChunk() {
-  const db = getDb();
-
-  // Check if already imported (unless force)
-  const rawHash = await hashFile(CSV_PATH);
-
-  if (!FORCE) {
-    const existing = db.prepare('SELECT id FROM cms_snapshots WHERE data_hash = ?').get(rawHash) as any;
-    if (existing) {
-      const count = db.prepare('SELECT COUNT(*) as c FROM cms_rates WHERE snapshot_id = ?').get(existing.id) as any;
-      if (count.c > 0) {
-        console.log(`Already imported (snapshot #${existing.id}, ${count.c} rates). Use --force=true to reimport.`);
-        closeDb();
-        return;
-      }
-    }
-  }
-
-  // Create snapshot if needed
-  let snapshotId: number;
-  const existing = db.prepare('SELECT id FROM cms_snapshots WHERE data_hash = ?').get(rawHash) as any;
-  if (existing) {
-    snapshotId = existing.id;
-    console.log(`Using existing snapshot #${snapshotId}`);
-  } else {
-    const fileName = `cms-pfs-${YEAR}.csv`;
-    const result = db.prepare(
-      'INSERT INTO cms_snapshots (source_url, file_name, effective_year, data_hash) VALUES (?, ?, ?, ?)'
-    ).run(SOURCE_URL, fileName, YEAR, rawHash);
-    snapshotId = result.lastInsertRowid as number;
-    console.log(`Created snapshot #${snapshotId}`);
-  }
-
-  // Parse CSV
-  let headerFound = false;
-  let headerMap: Record<string, number> = {};
-  let dataLineNum = 0;
-  let imported = 0;
-  let skipped = 0;
-
-  const rates: CMSRate[] = [];
-
-  const rl = createInterface({
-    input: createReadStream(CSV_PATH, { encoding: 'utf-8' }),
-    crlfDelay: Infinity,
-  });
-
-  for await (const line of rl) {
-    if (!line.trim()) continue;
-
-    if (!headerFound) {
-      const upper = line.toUpperCase();
-      if (EXPECTED_HEADERS.every(h => upper.includes(h))) {
-        const cols = parseCsvLine(line);
-        for (let i = 0; i < cols.length; i++) {
-          headerMap[cols[i].trim().toUpperCase()] = i;
-        }
-        headerFound = true;
-        console.log(`Header found: ${cols.length} columns`);
-        continue;
-      }
-      continue;
-    }
-
-    dataLineNum++;
-    if (dataLineNum <= OFFSET) continue;
-    if (dataLineNum > OFFSET + LIMIT) break;
-
-    const fields = parseCsvLine(line);
-    if (fields.length < 5) { skipped++; continue; }
-
-    const hcpcsCode = getCol(fields, headerMap, 'HCPCS')?.trim();
-    if (!hcpcsCode || !/^[A-Z0-9]{5}$/i.test(hcpcsCode)) { skipped++; continue; }
-
-    const facilityRate = parseRate(getCol(fields, headerMap, 'PAR FAC PE RVU'));
-    const nonFacilityRate = parseRate(getCol(fields, headerMap, 'PAR NFAC PE RVU'));
-
-    if (facilityRate === null && nonFacilityRate === null) { skipped++; continue; }
-
-    try {
-      const rate = CMSRateSchema.parse({
-        hcpcsCode: hcpcsCode.toUpperCase(),
-        modifier: getCol(fields, headerMap, 'MOD')?.trim() || undefined,
-        description: getCol(fields, headerMap, 'DESCRIPTION')?.trim() || undefined,
-        facilityRate: facilityRate ?? undefined,
-        nonFacilityRate: nonFacilityRate ?? undefined,
-        localityCode: getCol(fields, headerMap, 'LOCALITY NUMBER')?.trim() || undefined,
-        statusCode: getCol(fields, headerMap, 'STATUS CODE')?.trim() || undefined,
-        effectiveYear: YEAR,
-      });
-      rates.push(rate);
-    } catch { skipped++; }
-  }
-
-  // Bulk insert
-  const insertRate = db.prepare(`
-    INSERT INTO cms_rates
-      (snapshot_id, hcpcs_code, modifier, description, facility_rate, non_facility_rate, locality_code, status_code, effective_year)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const insertMany = db.transaction((rates: CMSRate[]) => {
-    for (const r of rates) {
-      insertRate.run(
-        snapshotId, r.hcpcsCode, r.modifier ?? null, r.description ?? null,
-        r.facilityRate ?? null, r.nonFacilityRate ?? null,
-        r.localityCode ?? null, r.statusCode ?? null, r.effectiveYear
-      );
-      imported++;
-    }
-  });
-
-  insertMany(rates);
-
-  console.log(`\nChunk imported: ${imported} rates (skipped ${skipped})`);
-  console.log(`Offset ${OFFSET} to ${OFFSET + LIMIT} processed.`);
-
-  closeDb();
-}
-
-function getCol(fields: string[], headerMap: Record<string, number>, colName: string): string | null {
-  const idx = headerMap[colName];
-  if (idx === undefined || idx >= fields.length) return null;
-  return fields[idx];
-}
-
-function parseRate(value: string | null): number | null {
-  if (!value) return null;
-  const cleaned = value.replace(/[$,\s]/g, '').trim();
-  if (cleaned === '' || cleaned === '.') return null;
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
-}
+import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 
 function parseCsvLine(line: string): string[] {
   const fields: string[] = [];
@@ -167,15 +13,9 @@ function parseCsvLine(line: string): string[] {
   const len = line.length;
   while (pos <= len) {
     if (pos < len && line[pos] === '"') {
-      let end = pos + 1;
-      while (end < len) {
-        if (line[end] === '"') {
-          if (end + 1 < len && line[end + 1] === '"') { end += 2; continue; }
-          break;
-        }
-        end++;
-      }
-      fields.push(line.slice(pos + 1, end).replace(/""/g, '"'));
+      const end = line.indexOf('"', pos + 1);
+      if (end === -1) { fields.push(line.slice(pos + 1)); break; }
+      fields.push(line.slice(pos + 1, end));
       pos = end + 2;
     } else {
       const comma = line.indexOf(',', pos);
@@ -187,4 +27,160 @@ function parseCsvLine(line: string): string[] {
   return fields;
 }
 
-await importChunk();
+function parseRate(value: string | null): number | null {
+  if (!value) return null;
+  const cleaned = value.replace(/[$,\s]/g, '').trim();
+  if (cleaned === '' || cleaned === '.') return null;
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const mode = args[0]; // 'init', 'chunk', or 'finalize'
+  const csvPath = 'data/cms-downloads/PFALL26AR.txt';
+  const dbPath = resolve('data', 'billscan.db');
+  const year = 2026;
+
+  mkdirSync(dirname(dbPath), { recursive: true });
+
+  if (mode === 'init') {
+    // Create DB, schema, snapshot
+    const db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS cms_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, source_url TEXT NOT NULL,
+        effective_year INTEGER NOT NULL, fetched_at TEXT NOT NULL,
+        data_hash TEXT NOT NULL, row_count INTEGER NOT NULL,
+        file_name TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS cms_rates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        snapshot_id INTEGER NOT NULL REFERENCES cms_snapshots(id),
+        cpt_code TEXT NOT NULL, modifier TEXT, description TEXT,
+        facility_rate REAL, non_facility_rate REAL, locality TEXT,
+        locality_name TEXT, status_indicator TEXT,
+        effective_year INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_cms_rates_cpt ON cms_rates(cpt_code);
+      CREATE INDEX IF NOT EXISTS idx_cms_rates_cpt_mod ON cms_rates(cpt_code, modifier);
+      CREATE INDEX IF NOT EXISTS idx_cms_rates_cpt_loc ON cms_rates(cpt_code, locality);
+      CREATE TABLE IF NOT EXISTS audits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, report_id TEXT UNIQUE NOT NULL,
+        input_hash TEXT NOT NULL, snapshot_id INTEGER REFERENCES cms_snapshots(id),
+        total_billed REAL, total_cms REAL, total_savings REAL,
+        finding_count INTEGER, report_json TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
+    // Compute hash
+    const hashStream = createReadStream(csvPath);
+    const sha = createHash('sha256');
+    for await (const chunk of hashStream) { sha.update(chunk); }
+    const rawHash = `sha256:${sha.digest('hex')}`;
+
+    const r = db.prepare(`
+      INSERT INTO cms_snapshots (source_url, effective_year, fetched_at, data_hash, row_count, file_name)
+      VALUES (?, ?, datetime('now'), ?, 0, ?)
+    `).run('https://www.cms.gov/files/zip/pfrev26a-updated-12-29-2025.zip', year, rawHash, 'PFALL26AR.txt');
+    
+    console.log(`SNAPSHOT_ID=${Number(r.lastInsertRowid)}`);
+    db.close();
+    return;
+  }
+
+  if (mode === 'chunk') {
+    const offset = parseInt(args[1]) || 0;
+    const limit = parseInt(args[2]) || 200000;
+    const snapshotId = parseInt(args[3]);
+
+    const db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = OFF');
+    db.pragma('cache_size = -32000');
+
+    const insert = db.prepare(`
+      INSERT INTO cms_rates (snapshot_id, cpt_code, modifier, description, facility_rate, non_facility_rate, locality, locality_name, status_indicator, effective_year)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const BATCH_SIZE = 5000;
+    let batch: any[][] = [];
+    let parsed = 0;
+    let skipped = 0;
+    let lineNum = 0;
+    const endLine = offset + limit;
+
+    const flushBatch = () => {
+      if (batch.length === 0) return;
+      const txn = db.transaction(() => {
+        for (const r of batch) {
+          insert.run(snapshotId, r[0], r[1], null, r[2], r[3], r[4], null, r[5], year);
+        }
+      });
+      txn();
+      batch = [];
+    };
+
+    const rl = createInterface({
+      input: createReadStream(csvPath, { encoding: 'utf-8', highWaterMark: 64 * 1024 }),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+      lineNum++;
+      if (lineNum <= offset) continue;
+      if (lineNum > endLine) break;
+      if (!line.trim()) continue;
+
+      const fields = parseCsvLine(line);
+      if (fields.length < 10) continue;
+
+      const cptCode = fields[3]?.trim();
+      if (!cptCode) continue;
+
+      const facRate = parseRate(fields[5]);
+      const nfRate = parseRate(fields[6]);
+      if ((facRate === null || facRate === 0) && (nfRate === null || nfRate === 0)) {
+        skipped++;
+        continue;
+      }
+
+      batch.push([cptCode, fields[4]?.trim() || null, facRate, nfRate, fields[2]?.trim() || null, fields[9]?.trim() || null]);
+      parsed++;
+
+      if (batch.length >= BATCH_SIZE) flushBatch();
+    }
+
+    flushBatch();
+    db.close();
+    console.log(`CHUNK offset=${offset} limit=${limit} parsed=${parsed} skipped=${skipped}`);
+    return;
+  }
+
+  if (mode === 'finalize') {
+    const snapshotId = parseInt(args[1]);
+    const db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    const count = (db.prepare(`SELECT COUNT(*) as c FROM cms_rates WHERE snapshot_id = ?`).get(snapshotId) as any).c;
+    db.prepare(`UPDATE cms_snapshots SET row_count = ? WHERE id = ?`).run(count, snapshotId);
+    
+    // Get unique CPT code count
+    const uniqueCPT = (db.prepare(`SELECT COUNT(DISTINCT cpt_code) as c FROM cms_rates WHERE snapshot_id = ?`).get(snapshotId) as any).c;
+    
+    // Sample some rates
+    const samples = db.prepare(`SELECT cpt_code, facility_rate, non_facility_rate, locality FROM cms_rates WHERE snapshot_id = ? LIMIT 5`).all(snapshotId);
+    
+    db.close();
+    console.log(`FINALIZE snapshot=${snapshotId} total_rows=${count} unique_cpt=${uniqueCPT}`);
+    console.log(`SAMPLES: ${JSON.stringify(samples)}`);
+    return;
+  }
+
+  console.log('Usage: import-chunk.ts [init|chunk <offset> <limit> <snapshotId>|finalize <snapshotId>]');
+}
+
+main().catch(e => { console.error(e.message); process.exit(1); });

@@ -5,62 +5,53 @@ import { importClfsRates, importAspRates, importOppsRates } from '../src/collect
 import { seedZipLocality } from '../src/matcher/zip-locality.js';
 import { seedCharityHospitals } from '../src/analyzer/charity-care.js';
 import { closeDb } from '../src/db/connection.js';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 
-const YEAR = parseInt(process.argv[2] ?? '2026');
-const DATA_DIR = join(process.cwd(), 'data');
+async function main() {
+  const year = 2026;
 
-console.log(`\n=== BillScan Phase 2 Data Import ===`);
-console.log(`Year: ${YEAR}\n`);
+  // Import CLFS
+  console.log('\n=== Importing CLFS ===');
+  const clfs = await parseClfsCsv('data/cms-downloads/CLFS 2026 Q1V1.csv', year);
+  const clfsResult = importClfsRates(
+    clfs.rates,
+    'https://www.cms.gov/files/zip/26clabq1.zip',
+    year,
+    clfs.rawHash,
+    'CLFS 2026 Q1V1.csv'
+  );
+  console.log(`CLFS: ${clfsResult.rowCount} rates, snapshot #${clfsResult.snapshotId}`);
 
-try {
-  // CLFS
-  const clfsPath = join(DATA_DIR, `cms-clfs-${YEAR}.csv`);
-  if (existsSync(clfsPath)) {
-    console.log('Importing CLFS...');
-    const { rates, rawHash } = await parseClfsCsv(clfsPath, YEAR);
-    const { rowCount } = importClfsRates(rates, `cms-clfs-${YEAR}`, YEAR, rawHash, `cms-clfs-${YEAR}.csv`);
-    console.log(`✅ CLFS: ${rowCount} lab rates imported`);
-  } else {
-    console.log(`⚠️  CLFS CSV not found: ${clfsPath}`);
-  }
+  // Import ASP
+  console.log('\n=== Importing ASP ===');
+  const asp = await parseAspCsv('data/cms-downloads/section 508 version of January 2026 Medicare Part B Payment Limit File 121725.csv', year);
+  const aspResult = importAspRates(
+    asp.rates,
+    'https://www.cms.gov/files/zip/january-2026-medicare-part-b-payment-limit-files.zip',
+    year,
+    asp.rawHash,
+    'January 2026 Medicare Part B Payment Limit File.csv'
+  );
+  console.log(`ASP: ${aspResult.rowCount} rates, snapshot #${aspResult.snapshotId}`);
 
-  // ASP
-  const aspPath = join(DATA_DIR, `cms-asp-${YEAR}.csv`);
-  if (existsSync(aspPath)) {
-    console.log('Importing ASP...');
-    const { rates, rawHash } = await parseAspCsv(aspPath, YEAR);
-    const { rowCount } = importAspRates(rates, `cms-asp-${YEAR}`, YEAR, rawHash, `cms-asp-${YEAR}.csv`);
-    console.log(`✅ ASP: ${rowCount} drug rates imported`);
-  } else {
-    console.log(`⚠️  ASP CSV not found: ${aspPath}`);
-  }
+  // Import OPPS
+  console.log('\n=== Importing OPPS ===');
+  const opps = await parseOppsCsv('data/cms-downloads/opps-addendum-b-2026.csv', year);
+  const oppsResult = importOppsRates(
+    opps.rates,
+    'https://www.cms.gov/files/zip/january-2026-opps-addendum-b.zip',
+    year,
+    opps.rawHash,
+    '2026 January Web Addendum B.csv'
+  );
+  console.log(`OPPS: ${oppsResult.rowCount} rates, snapshot #${oppsResult.snapshotId}`);
 
-  // OPPS
-  const oppsPath = join(DATA_DIR, `cms-opps-${YEAR}.csv`);
-  if (existsSync(oppsPath)) {
-    console.log('Importing OPPS...');
-    const { rates, rawHash } = await parseOppsCsv(oppsPath, YEAR);
-    const { rowCount } = importOppsRates(rates, `cms-opps-${YEAR}`, YEAR, rawHash, `cms-opps-${YEAR}.csv`);
-    console.log(`✅ OPPS: ${rowCount} APC rates imported`);
-  } else {
-    console.log(`⚠️  OPPS CSV not found: ${oppsPath}`);
-  }
-
-  // Seed ZIP locality
-  console.log('Seeding ZIP locality data...');
+  // Seed ZIP locality and charity data
+  console.log('\n=== Seeding reference data ===');
   seedZipLocality();
-  console.log('✅ ZIP locality seeded');
-
-  // Seed charity hospitals
-  console.log('Seeding charity hospital data...');
   seedCharityHospitals();
-  console.log('✅ Charity hospitals seeded');
 
-} catch (err) {
-  console.error(`❌ ${(err as Error).message}`);
-  process.exit(1);
-} finally {
+  console.log('\n=== Done ===');
   closeDb();
 }
+
+main().catch(e => { console.error(e); process.exit(1); });
