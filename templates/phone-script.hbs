@@ -1,0 +1,30 @@
+BILLSCAN PHONE NEGOTIATION SCRIPT
+Bill: {{facilityName}} | Total: ${{totalBilled}} | Savings Target: ${{totalSavings}}
+
+STEP 1 — CALL BILLING DEPARTMENT
+"Hi, I'm calling about my recent bill from {{facilityName}}, statement date {{statementDate}}. I have some questions about specific charges."
+
+STEP 2 — REQUEST ITEMIZED BILL (if you don't have one)
+"Can you send me a fully itemized bill with CPT codes for each charge? I'm entitled to this under federal law."
+
+STEP 3 — CHALLENGE SPECIFIC CHARGES (start with biggest)
+{{#each topFindings}}
+"I see a charge of ${{this.billedAmount}} for {{this.description}} (CPT {{this.cptCode}}). The Medicare rate for this procedure is ${{this.cmsRateUsed}}. That's a {{this.overchargeMultiplier}}x markup. Can you explain why this charge is so much higher?"
+{{/each}}
+
+STEP 4 — ASK FOR REDUCTION
+"Based on my research, the CMS baseline for all these services totals ${{totalCmsBaseline}}. I understand hospitals charge more than Medicare, but ${{totalBilled}} is {{averageMultiplier}}x the baseline. I'd like to discuss a fair adjustment."
+
+STEP 5 — ESCALATE IF NEEDED
+"I'd like to speak with a billing supervisor or patient advocate, please."
+"I'm prepared to file a formal dispute and have documentation from the CMS fee schedule."
+
+STEP 6 — ASK ABOUT ASSISTANCE
+"Do you have a financial assistance or charity care program I can apply for?"
+"What is your self-pay discount rate?"
+
+NOTES:
+- Stay calm and polite — you have leverage with data
+- Take names and reference numbers for every call
+- Follow up in writing within 48 hours
+- Report ID: {{reportId}} (for your records)
