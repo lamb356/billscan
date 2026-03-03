@@ -4,40 +4,36 @@
 Billing Department
 {{facilityAddress}}
 
-Re: Dispute of Charges — Account Review Request
-Patient Account: [YOUR ACCOUNT NUMBER]
-Date of Service: [DATE OF SERVICE]
+Re: Dispute of Medical Bill — Statement Date {{statementDate}}
+Patient Account: {{patientAccount}}
 
 Dear Billing Department,
 
-I am writing to formally dispute charges on my recent medical bill totaling ${{totalBilled}}.
+I am writing to formally dispute charges on my recent medical bill. After reviewing my statement against the Centers for Medicare & Medicaid Services (CMS) {{cmsYear}} Physician Fee Schedule, I have identified significant discrepancies between the amounts billed and established Medicare reimbursement rates.
 
-Using BillScan (an AI medical bill auditor that compares charges against CMS Medicare fee schedules), I have identified potential overcharges based on the {{cmsYear}} CMS fee schedule.
+The following charges appear to substantially exceed CMS baseline rates:
 
-SUMMARY OF FINDINGS:
-  Total Amount Billed:        ${{totalBilled}}
-  CMS Medicare Baseline:      ${{totalCmsBaseline}}
-  Potential Overcharge:       ${{totalPotentialSavings}}
+{{#each topFindings}}
+- {{this.cptCode}} ({{this.description}}): Billed ${{this.billedAmount}}, CMS {{this.rateContext}} rate: ${{this.cmsRateUsed}} — a {{this.overchargeMultiplier}}x markup
+{{/each}}
 
-HIGHLIGHTED ITEM:
-  CPT Code:    {{topCptCode}}
-  Description: {{topDescription}}
-  Billed:      ${{topBilled}}
-  CMS Rate:    ${{topCmsRate}}
-  Overcharge:  ${{topOvercharge}}
+Total billed: ${{totalBilled}}
+CMS baseline total: ${{totalCmsBaseline}}
+Identified potential overcharges: ${{totalSavings}}
 
-I am requesting:
-1. An itemized bill for all {{matchedLineCount}} line items ({{overchargedLineCount}} showing potential overcharges)
-2. A written explanation for charges exceeding the CMS Medicare rate
-3. An adjustment to reflect the CMS fee schedule rates
-4. Information about your financial assistance program (if applicable)
+I respectfully request:
+1. An itemized bill with CPT/HCPCS codes for all charges
+2. A written explanation for charges exceeding 3x the CMS fee schedule rate
+3. Adjustment of charges to a reasonable rate consistent with fair market pricing
+4. Information about financial assistance or charity care programs
 
-Please be advised that I have a report (ID: {{reportId}}, generated {{generatedAt}}) documenting these discrepancies using official CMS data.
+This analysis was generated using publicly available CMS fee schedule data (source: {{cmsSourceUrl}}, effective {{cmsYear}}). Report ID: {{reportId}}.
 
-I expect a response within 30 days.
+I look forward to your response within 30 days as required by the No Surprises Act.
 
 Sincerely,
-[YOUR NAME]
-[YOUR ADDRESS]
-[YOUR PHONE]
-[YOUR EMAIL]
+[Patient Name]
+[Contact Information]
+
+---
+Audit verification: billscan.dev/verify/{{reportId}}
