@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="description" content="BillScan — Audit your medical bill against 1M+ Medicare rates and find overcharges instantly.">
+  <title>BillScan — Medical Bill Auditor</title>
+  <style>
+    /* ─── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161b22;
+      --surface2:   #1c2230;
+      --border:     rgba(255,255,255,0.08);
+      --border2:    rgba(255,255,255,0.14);
+
+      --text:       #e6edf3;
+      --text-muted: #8b949e;
+      --text-faint: #484f58;
+
+      --green:      #3fb950;
+      --green-dim:  #1a4726;
+      --green-bg:   rgba(63,185,80,0.1);
+
+      --red:        #f85149;
+      --red-dim:    #5a1e1a;
+      --red-bg:     rgba(248,81,73,0.1);
+
+      --yellow:     #e3b341;
+      --yellow-bg:  rgba(227,179,65,0.1);
+
+      --blue:       #58a6ff;
+      --blue-bg:    rgba(88,166,255,0.1);
+
+      --accent:     #3fb950;
+
+      --radius-sm:  6px;
+      --radius:     10px;
+      --radius-lg:  16px;
+
+      --shadow:     0 4px 24px rgba(0,0,0,0.5);
+      --shadow-sm:  0 2px 8px rgba(0,0,0,0.35);
+
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+      --nav-h: 56px;
+      --max-w: 1100px;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    img, svg { display: block; max-width: 100%; }
+    button {
+      font-family: var(--font);
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: inherit;
+    }
+    input, select, textarea {
+      font-family: var(--font);
+      color: var(--text);
+    }
+
+    /* ─── Nav ────────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--nav-h);
+      background: rgba(13,17,23,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--text);
+      text-decoration: none;
+      margin-right: auto;
+      min-width: 0;
+    }
+    .nav-logo svg { flex-shrink: 0; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-link {
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      white-space: nowrap;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: var(--text);
+      background: var(--surface);
+      text-decoration: none;
+    }
+    .nav-link.active { color: var(--accent); }
+
+    /* Hamburger */
+    .nav-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      background: var(--surface);
+    }
+    .nav-toggle:hover { color: var(--text); }
+
+    /* Mobile nav drawer */
+    .nav-drawer {
+      display: none;
+      position: fixed;
+      inset: var(--nav-h) 0 0 0;
+      background: rgba(13,17,23,0.97);
+      z-index: 99;
+      flex-direction: column;
+      padding: 16px;
+      gap: 4px;
+      border-top: 1px solid var(--border);
+    }
+    .nav-drawer.open { display: flex; }
+    .nav-drawer .nav-link {
+      font-size: 16px;
+      padding: 12px 16px;
+    }
+
+    /* ─── Pages ───────────────────────────────────────────────────── */
+    .page { display: none; min-height: calc(100vh - var(--nav-h)); }
+    .page.active { display: block; }
+
+    /* ─── Layout helpers ──────────────────────────────────────────── */
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    .section { padding: 48px 0; }
+    .section-sm { padding: 24px 0; }
+
+    /* ─── Typography ─────────────────────────────────────────────── */
+    .hero-title {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    .hero-subtitle {
+      font-size: clamp(15px, 2.5vw, 19px);
+      color: var(--text-muted);
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    h2 { font-size: clamp(20px, 3vw, 28px); font-weight: 700; letter-spacing: -0.01em; }
+    h3 { font-size: 16px; font-weight: 600; }
+    .label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* ─── Buttons ─────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.15s;
+      cursor: pointer;
+      min-height: 44px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { background: #50cf60; }
+    .btn-primary:disabled { background: #2a5a30; color: #666; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border2);
+    }
+    .btn-secondary:hover { background: var(--surface); border-color: var(--border2); }
+    .btn-ghost {
+      color: var(--text-muted);
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--surface); }
+    .btn-lg {
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: var(--radius-lg);
+      min-height: 52px;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+      min-height: 32px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ─── Cards ───────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .card-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .stat-card .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-card .stat-value {
+      font-size: clamp(20px, 3vw, 28px);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-card .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* ─── Forms ───────────────────────────────────────────────────── */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+    .form-input {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--text);
+      transition: border-color 0.15s;
+      min-height: 44px;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
+    }
+    .form-input::placeholder { color: var(--text-faint); }
+    .form-select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--text);
+      min-height: 44px;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    .form-select:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      min-height: 44px;
+    }
+    .checkbox-row input[type=checkbox] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .checkbox-row span { font-size: 14px; color: var(--text-muted); }
+
+    /* ─── Upload Zone ─────────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--green-bg);
+    }
+    .upload-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-zone .upload-icon { color: var(--text-muted); margin-bottom: 12px; }
+    .upload-zone .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .upload-zone .upload-sub { font-size: 13px; color: var(--text-muted); }
+    .upload-zone.has-file { border-color: var(--accent); background: var(--green-bg); }
+    .upload-zone.has-file .upload-icon { color: var(--accent); }
+
+    /* ─── Badges / Tags ────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .badge-low    { background: var(--blue-bg);   color: var(--blue);   }
+    .badge-medium { background: var(--yellow-bg);  color: var(--yellow); }
+    .badge-high   { background: var(--red-bg);     color: var(--red);    }
+    .badge-extreme{ background: #3a0000;            color: #ff6b6b;       }
+    .badge-none   { background: var(--surface2);   color: var(--text-muted); }
+    .badge-ok     { background: var(--green-bg);   color: var(--green);  }
+    .badge-warn   { background: var(--yellow-bg);  color: var(--yellow); }
+
+    /* ─── Table ───────────────────────────────────────────────────── */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead { background: var(--surface2); }
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .td-code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--blue);
+    }
+    .td-amount { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .td-overcharge { color: var(--red); }
+    .td-ok { color: var(--green); }
+    .td-neutral { color: var(--text-muted); }
+
+    /* ─── Mobile card rows ────────────────────────────────────────── */
+    .finding-cards { display: none; }
+    .finding-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .finding-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .finding-card-code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue);
+    }
+    .finding-card-desc {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-top: 2px;
+    }
+    .finding-card-rows { display: flex; flex-direction: column; gap: 6px; }
+    .finding-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .finding-card-row .fcr-label { color: var(--text-muted); }
+    .finding-card-row .fcr-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ─── Loading / Spinner ────────────────────────────────────────── */
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2.5px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 64px 24px;
+      color: var(--text-muted);
+    }
+    .loading-box .loading-msg { font-size: 15px; }
+
+    /* ─── Alerts ──────────────────────────────────────────────────── */
+    .alert {
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid transparent;
+    }
+    .alert-error   { background: var(--red-bg);    border-color: rgba(248,81,73,0.3);  color: var(--red);    }
+    .alert-success { background: var(--green-bg);  border-color: rgba(63,185,80,0.3);  color: var(--green);  }
+    .alert-info    { background: var(--blue-bg);   border-color: rgba(88,166,255,0.3); color: var(--blue);   }
+    .alert-warn    { background: var(--yellow-bg); border-color: rgba(227,179,65,0.3); color: var(--yellow); }
+    .alert-icon { flex-shrink: 0; font-size: 16px; }
+
+    /* ─── Summary row ────────────────────────────────────────────── */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    /* ─── Toggle group ────────────────────────────────────────────── */
+    .toggle-group {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 3px;
+      gap: 2px;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 7px 12px;
+      border-radius: calc(var(--radius) - 2px);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      min-height: 36px;
+      text-align: center;
+    }
+    .toggle-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    /* ─── Charity card ────────────────────────────────────────────── */
+    .charity-card {
+      background: var(--blue-bg);
+      border: 1px solid rgba(88,166,255,0.2);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .charity-card.nonprofit {
+      background: var(--green-bg);
+      border-color: rgba(63,185,80,0.25);
+    }
+
+    /* ─── Steps ────────────────────────────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .step-num {
+      width: 36px;
+      height: 36px;
+      background: var(--green-bg);
+      border: 1px solid rgba(63,185,80,0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--accent);
+      margin: 0 auto 14px;
+    }
+    .step-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .step-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ─── Stats bars ─────────────────────────────────────────────── */
+    .bar-chart { display: flex; flex-direction: column; gap: 12px; }
+    .bar-row { display: flex; flex-direction: column; gap: 5px; }
+    .bar-header { display: flex; justify-content: space-between; font-size: 13px; }
+    .bar-label { color: var(--text-muted); }
+    .bar-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .bar-track {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: var(--accent);
+      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 13px;
+    }
+    footer a { color: var(--text-muted); }
+
+    /* ─── Divider ────────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    /* ─── Print ───────────────────────────────────────────────────── */
+    @media print {
+      .nav, .upload-section, .options-panel, .export-bar, footer { display: none !important; }
+      body { background: #fff; color: #000; }
+      .card { border: 1px solid #ccc; }
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      :root { --nav-h: 52px; }
+      .nav-links { display: none; }
+      .nav-toggle { display: flex; }
+      .section { padding: 32px 0; }
+      .steps { grid-template-columns: 1fr; }
+      .summary-row { grid-template-columns: 1fr 1fr; }
+      /* Responsive table: hide on mobile, show cards */
+      .findings-table { display: none; }
+      .finding-cards { display: flex; flex-direction: column; gap: 12px; }
+    }
+    @media (min-width: 769px) {
+      .summary-row { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    /* ─── Collapsible ─────────────────────────────────────────────── */
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .collapsible-header svg {
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .collapsible.open .collapsible-header svg { transform: rotate(180deg); }
+    .collapsible-body { margin-top: 16px; }
+    .collapsible:not(.open) .collapsible-body { display: none; }
+
+    /* ─── Multiplier indicator ────────────────────────────────────── */
+    .mult-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mult-bar.low    { color: var(--blue); }
+    .mult-bar.medium { color: var(--yellow); }
+    .mult-bar.high   { color: var(--red); }
+    .mult-bar.extreme{ color: #ff4444; }
+
+    /* ─── Matched / Unmatched count ─────────────────────────────── */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .pill-green { background: var(--green-bg); color: var(--green); }
+    .pill-gray  { background: var(--surface2); color: var(--text-muted); }
+
+    /* ─── Transition for pages ───────────────────────────────────── */
+    .page { animation: fadeIn 0.15s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ─── Empty state ────────────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 64px 24px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .empty-state svg { color: var(--text-faint); }
+    .empty-state h3 { font-size: 16px; color: var(--text); }
+    .empty-state p { font-size: 14px; max-width: 320px; }
+
+    /* ─── Audit source tag ───────────────────────────────────────── */
+    .source-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--text-muted);
+    }
+    .source-pfs  { background: rgba(88,166,255,0.15);  color: var(--blue); }
+    .source-clfs { background: rgba(63,185,80,0.15);   color: var(--green); }
+    .source-asp  { background: rgba(227,179,65,0.15);  color: var(--yellow); }
+    .source-opps { background: rgba(248,81,73,0.15);   color: var(--red); }
+
+    /* ─── 3-Way Comparison (EOB / Insurance) ──────────────────────── */
+    .eob-banner {
+      background: var(--blue-bg);
+      border: 1px solid rgba(88,166,255,0.25);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    .eob-banner-icon { font-size: 20px; flex-shrink: 0; }
+    .eob-banner-text { color: var(--blue); }
+    .eob-banner-text strong { color: var(--text); }
+
+    .comparison-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .comparison-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      text-align: center;
+    }
+    .comparison-card .cc-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .comparison-card .cc-value {
+      font-size: clamp(18px, 2.5vw, 24px);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .comparison-card .cc-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .comparison-card.cc-billed { border-top: 3px solid var(--red); }
+    .comparison-card.cc-cms    { border-top: 3px solid var(--blue); }
+    .comparison-card.cc-insur  { border-top: 3px solid var(--yellow); }
+    .comparison-card.cc-owe    { border-top: 3px solid var(--green); }
+
+    .comparison-bar-section { margin-top: 16px; }
+    .comparison-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .comparison-bar-label {
+      width: 100px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      text-align: right;
+      font-size: 12px;
+    }
+    .comparison-bar-track {
+      flex: 1;
+      height: 18px;
+      background: var(--surface2);
+      border-radius: 100px;
+      overflow: hidden;
+      position: relative;
+    }
+    .comparison-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #000;
+      min-width: 40px;
+    }
+    .comparison-bar-fill.bar-billed { background: var(--red); }
+    .comparison-bar-fill.bar-cms    { background: var(--blue); }
+    .comparison-bar-fill.bar-insur  { background: var(--yellow); }
+    .comparison-bar-fill.bar-owe    { background: var(--green); }
+
+    .insight-list { display: flex; flex-direction: column; gap: 8px; }
+    .insight-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .insight-item.insight-info    { background: var(--blue-bg); color: var(--blue); }
+    .insight-item.insight-warning { background: var(--yellow-bg); color: var(--yellow); }
+    .insight-item.insight-alert   { background: var(--red-bg); color: var(--red); }
+    .insight-icon { flex-shrink: 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Navigation ──────────────────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <a href="#/" class="nav-logo" aria-label="BillScan home">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <rect width="28" height="28" rx="7" fill="#3fb950"/>
+      <path d="M7 9h14M7 14h10M7 19h7" stroke="#000" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="21" cy="18.5" r="4.5" fill="#0d1117" stroke="#3fb950" stroke-width="1.5"/>
+      <path d="M19.5 18.5l1 1 2-2" stroke="#3fb950" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    BillScan
+  </a>
+  <div class="nav-links" id="navLinks">
+    <a href="#/" class="nav-link active" data-page="home">Home</a>
+    <a href="#/audit" class="nav-link" data-page="audit">Audit Bill</a>
+    <a href="#/stats" class="nav-link" data-page="stats">Stats</a>
+  </div>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+    <svg id="hamburgerIcon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/>
+    </svg>
+  </button>
+</nav>
+<div class="nav-drawer" id="navDrawer" role="menu">
+  <a href="#/" class="nav-link" data-page="home" role="menuitem">Home</a>
+  <a href="#/audit" class="nav-link" data-page="audit" role="menuitem">Audit a Bill</a>
+  <a href="#/stats" class="nav-link" data-page="stats" role="menuitem">Stats</a>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- HOME PAGE                                                               -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <section class="section container" style="padding-top:64px">
+    <p class="label" style="margin-bottom:12px">Open-source medical bill auditor</p>
+    <h1 class="hero-title" style="margin-bottom:18px">
+      Scan your medical bill<br>against <span style="color:var(--accent)">1M+ Medicare</span> rates
+    </h1>
+    <p class="hero-subtitle" style="margin-bottom:32px">
+      Find out if you were overcharged. BillScan compares every line item on your bill against official CMS fee schedules — PFS, CLFS, ASP, and OPPS — and flags potential overcharges instantly.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <a href="#/audit" class="btn btn-primary btn-lg" id="heroAuditBtn">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 1v16M1 9h16" opacity=".4"/><rect x="3" y="3" width="12" height="12" rx="2"/><path d="M6 9h6M6 6h4M6 12h3"/></svg>
+        Audit Your Bill
+      </a>
+      <a href="#/stats" class="btn btn-secondary btn-lg">View Stats</a>
+    </div>
+  </section>
+
+  <!-- Data source stats row -->
+  <section class="section-sm container">
+    <div class="card-grid" id="homeSourceCards">
+      <div class="stat-card">
+        <div class="stat-label">Loading data sources…</div>
+        <div class="stat-value" style="color:var(--text-faint)">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section container">
+    <h2 style="margin-bottom:24px">How it works</h2>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-title">Upload Your Bill</div>
+        <div class="step-desc">Drop a JSON, PDF, or image of your medical bill. We accept Explanation of Benefits and itemized bills.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-title">Scan Against CMS Rates</div>
+        <div class="step-desc">Every CPT code is matched against the official Medicare fee schedule — PFS, CLFS, ASP, and OPPS data.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-title">Save on Your Bill</div>
+        <div class="step-desc">Get a transparent audit report with overcharge amounts, severity ratings, and dispute advice.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About CMS data -->
+  <section class="section-sm container">
+    <div class="card">
+      <h3 style="margin-bottom:10px">About our data</h3>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.7">
+        BillScan uses official CMS (Centers for Medicare &amp; Medicaid Services) fee schedules.
+        The <strong style="color:var(--text)">Physician Fee Schedule (PFS)</strong> covers most outpatient procedures.
+        The <strong style="color:var(--text)">Clinical Lab Fee Schedule (CLFS)</strong> covers lab tests.
+        The <strong style="color:var(--text)">Average Sales Price (ASP)</strong> covers drugs and biologicals.
+        The <strong style="color:var(--text)">Outpatient Prospective Payment System (OPPS)</strong> covers hospital outpatient services.
+        All rates are updated annually and stored locally — no data leaves your device.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      BillScan is a transparency tool, not legal or medical advice.
+      All rates from official <a href="https://www.cms.gov" target="_blank" rel="noopener">CMS.gov</a> data.
+    </div>
+  </footer>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- AUDIT PAGE                                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-audit">
+  <div class="container" style="padding-top:32px;padding-bottom:64px">
+    <h2 style="margin-bottom:6px">Audit a Bill</h2>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px">Upload a bill file or paste JSON to scan against CMS rates.</p>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:20px" id="auditGrid">
+
+      <!-- Upload panel -->
+      <div class="card upload-section" style="grid-column:1">
+        <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="Upload bill file">
+          <input type="file" id="fileInput" accept=".json,.pdf,.jpg,.jpeg,.png" aria-label="Choose bill file">
+          <div class="upload-icon">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="4" y="6" width="32" height="28" rx="3" stroke-opacity=".4"/>
+              <path d="M14 20h12M20 14v12" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="upload-title" id="uploadTitle">Drop your bill here</div>
+          <div class="upload-sub" id="uploadSub">or click to browse — JSON, PDF, JPG, PNG</div>
+        </div>
+      </div>
+
+      <!-- Options panel -->
+      <div class="card options-panel">
+        <h3 style="margin-bottom:16px">Options</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-group">
+            <label class="form-label" for="zipInput">ZIP Code</label>
+            <input type="text" id="zipInput" class="form-input" placeholder="e.g. 10001" maxlength="5" pattern="[0-9]{5}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="planSelect">Insurance Plan</label>
+            <select id="planSelect" class="form-select">
+              <option value="">None</option>
+              <option value="hmo">HMO</option>
+              <option value="ppo">PPO</option>
+              <option value="oon">Out-of-Network</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <div class="form-label" style="margin-bottom:8px">Setting</div>
+          <div class="toggle-group" id="settingToggle">
+            <button class="toggle-btn active" data-val="">Auto-detect</button>
+            <button class="toggle-btn" data-val="facility">Facility</button>
+            <button class="toggle-btn" data-val="office">Office</button>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <label class="checkbox-row">
+            <input type="checkbox" id="charityCheck">
+            <span>Check charity care / nonprofit status</span>
+          </label>
+        </div>
+        <hr class="divider">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="auditBtn" disabled>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+            Run Audit
+          </button>
+          <button class="btn btn-ghost btn-sm" id="clearBtn">Clear</button>
+        </div>
+      </div>
+
+    </div><!-- /auditGrid -->
+
+    <!-- Connection error -->
+    <div class="alert alert-error" id="connError" style="margin-top:20px;display:none">
+      <span class="alert-icon">⚠</span>
+      <div>
+        <strong>Cannot connect to BillScan server.</strong>
+        Make sure the server is running: <code style="font-family:var(--font-mono);font-size:12px">npx tsx src/server-start.ts</code>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-box" id="auditLoading" style="display:none">
+      <div class="spinner"></div>
+      <div class="loading-msg" id="loadingMsg">Scanning bill against CMS rates…</div>
+    </div>
+
+    <!-- Results -->
+    <div id="auditResults" style="display:none;margin-top:24px">
+
+      <!-- Summary cards -->
+      <div class="summary-row" id="summaryCards" style="margin-bottom:20px"></div>
+
+      <!-- Match pills -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap" id="matchRow"></div>
+
+      <!-- EOB / Insurance 3-way comparison (shown when insurance data present) -->
+      <div id="insuranceSection" style="display:none;margin-bottom:20px">
+        <div id="eobBanner" style="margin-bottom:16px"></div>
+        <div class="comparison-cards" id="comparisonCards" style="margin-bottom:16px"></div>
+        <div class="card" id="comparisonBarChart" style="margin-bottom:16px"></div>
+        <div id="insightsSection" style="margin-bottom:16px"></div>
+        <div id="comparisonFootnote" style="font-size:12px;color:var(--text-faint);font-style:italic;margin-bottom:16px"></div>
+      </div>
+
+      <!-- Export bar -->
+      <div class="export-bar" style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-secondary btn-sm" id="exportJsonBtn">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 10h9M6.5 2v6M4 6l2.5 2.5L9 6"/></svg>
+          Export JSON
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="window.print()">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="9" height="6" rx="1"/><path d="M4 4V2h5v2M4 10v1h5v-1"/></svg>
+          Print
+        </button>
+      </div>
+
+      <!-- Findings table (desktop) -->
+      <div class="findings-table table-wrapper" id="findingsTable"></div>
+
+      <!-- Findings cards (mobile) -->
+      <div class="finding-cards" id="findingCards"></div>
+
+      <!-- Charity care section -->
+      <div id="charitySection" style="margin-top:20px;display:none"></div>
+
+      <!-- Transparency stamp -->
+      <div class="card collapsible" id="stampCollapsible" style="margin-top:16px">
+        <div class="collapsible-header">
+          <h3>Transparency Stamp</h3>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg>
+        </div>
+        <div class="collapsible-body" id="stampBody"></div>
+      </div>
+
+    </div><!-- /auditResults -->
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- STATS PAGE                                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-stats">
+  <div class="container" style="padding-top:32px;padding-bottom:64px">
+    <h2 style="margin-bottom:6px">Aggregate Stats</h2>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px">Cumulative results from all audits run through this BillScan instance.</p>
+
+    <div id="statsContent">
+      <div class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-msg">Loading stats…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   BillScan SPA — Vanilla JS
+   ============================================================================ */
+
+const API = ''; // same origin
+
+// ── Router ───────────────────────────────────────────────────────────────────
+const pages = {
+  '/'      : 'home',
+  '/audit' : 'audit',
+  '/stats' : 'stats',
+};
+
+function getRoute() {
+  const h = location.hash || '#/';
+  const path = h.replace('#', '') || '/';
+  return path;
+}
+
+function navigate(route) {
+  const pageName = pages[route] || 'home';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + pageName);
+  if (page) page.classList.add('active');
+
+  document.querySelectorAll('.nav-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.page === pageName);
+  });
+
+  // Close mobile nav
+  closeDrawer();
+
+  // Lazy load data for pages
+  if (pageName === 'stats') loadStats();
+  if (pageName === 'home') loadHomeSources();
+}
+
+window.addEventListener('hashchange', () => navigate(getRoute()));
+window.addEventListener('load', () => navigate(getRoute()));
+
+// ── Mobile nav ────────────────────────────────────────────────────────────────
+const navToggle = document.getElementById('navToggle');
+const navDrawer = document.getElementById('navDrawer');
+
+navToggle.addEventListener('click', () => {
+  const open = navDrawer.classList.toggle('open');
+  navToggle.setAttribute('aria-expanded', open);
+});
+
+function closeDrawer() {
+  navDrawer.classList.remove('open');
+  navToggle.setAttribute('aria-expanded', false);
+}
+
+// Close drawer on nav-link click
+document.querySelectorAll('.nav-drawer .nav-link').forEach(l => {
+  l.addEventListener('click', closeDrawer);
+});
+
+// ── Collapsible ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.collapsible .collapsible-header').forEach(h => {
+  h.addEventListener('click', () => {
+    h.closest('.collapsible').classList.toggle('open');
+  });
+});
+
+// ── Formatters ─────────────────────────────────────────────────────────────────
+const fmt$ = n =>
+  n == null ? '—' : '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmtMult = n => n == null ? '—' : n.toFixed(1) + '×';
+
+const fmtNum = n => n == null ? '—' : n.toLocaleString();
+
+function severityClass(s) {
+  if (!s) return 'badge-none';
+  return 'badge-' + s;
+}
+
+function multClass(m) {
+  if (!m) return '';
+  if (m >= 10) return 'extreme';
+  if (m >= 5)  return 'high';
+  if (m >= 2)  return 'medium';
+  return 'low';
+}
+
+function sourceClass(s) {
+  if (!s) return '';
+  return 'source-' + s.toLowerCase();
+}
+
+function matchModeLabel(m) {
+  const map = {
+    'exact_code_modifier_locality': 'Exact + Locality',
+    'exact_code_modifier': 'Exact + Modifier',
+    'exact_code_only': 'Exact Code',
+    'unmatched': 'No Match',
+  };
+  return map[m] || m;
+}
+
+// ── API fetch helper ────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Server error' }));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── Home: load data source stats ────────────────────────────────────────────────
+async function loadHomeSources() {
+  const el = document.getElementById('homeSourceCards');
+  try {
+    const [health, dsRes] = await Promise.all([
+      apiFetch('/api/health'),
+      apiFetch('/api/data-sources'),
+    ]);
+
+    const sources = dsRes.sources || [];
+    const sourceNames = { PFS: 'Physician Fee Schedule', CLFS: 'Lab Fee Schedule', ASP: 'Drug Sales Price', OPPS: 'Outpatient PPS' };
+
+    if (!sources.length) {
+      el.innerHTML = `<div class="stat-card"><div class="stat-label">CMS Rates</div><div class="stat-value" style="color:var(--accent)">${fmtNum(health.rates)}</div><div class="stat-sub">Total rate entries</div></div>`;
+      return;
+    }
+
+    el.innerHTML = sources.map(s => `
+      <div class="stat-card">
+        <div class="stat-label">${sourceNames[s.name] || s.name}</div>
+        <div class="stat-value" style="color:var(--accent)">${fmtNum(s.count)}</div>
+        <div class="stat-sub">${s.name} rate entries</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="alert alert-warn"><span class="alert-icon">⚠</span><span>Could not load data sources. Is the server running?</span></div>`;
+  }
+}
+
+// ── Stats page ─────────────────────────────────────────────────────────────────
+let statsLoaded = false;
+async function loadStats() {
+  if (statsLoaded) return;
+  const el = document.getElementById('statsContent');
+  try {
+    const stats = await apiFetch('/api/stats');
+    statsLoaded = true;
+
+    const savingsRate = stats.totalBilled > 0
+      ? ((stats.totalSavingsFound / stats.totalBilled) * 100).toFixed(1)
+      : 0;
+
+    el.innerHTML = `
+      <div class="summary-row" style="margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Total Audits</div>
+          <div class="stat-value">${fmtNum(stats.totalAudits)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Billed</div>
+          <div class="stat-value">${fmt$(stats.totalBilled)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Savings Found</div>
+          <div class="stat-value" style="color:var(--green)">${fmt$(stats.totalSavingsFound)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Savings Rate</div>
+          <div class="stat-value">${savingsRate}%</div>
+          <div class="stat-sub">of total billed amount</div>
+        </div>
+      </div>
+
+      ${stats.totalAudits === 0 ? `
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="36" height="36" rx="4"/><path d="M16 20h16M16 28h10"/></svg>
+          <h3>No audits yet</h3>
+          <p>Run your first audit to see aggregate statistics here.</p>
+          <a href="#/audit" class="btn btn-primary" style="margin-top:8px">Audit a Bill</a>
+        </div>
+      ` : `
+        <div class="card">
+          <h3 style="margin-bottom:16px">About these stats</h3>
+          <p style="font-size:14px;color:var(--text-muted);line-height:1.7">
+            These are cumulative results from all audits saved to the local database.
+            Savings represent the difference between billed amounts and the official CMS fee schedule rates.
+            Every finding is reproducible from the report ID and CMS data hash.
+          </p>
+          ${stats.totalBilled > 0 ? `
+          <div class="bar-chart" style="margin-top:20px">
+            <div class="bar-row">
+              <div class="bar-header"><span class="bar-label">Total billed</span><span class="bar-val">${fmt$(stats.totalBilled)}</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--text-faint)"></div></div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-header"><span class="bar-label">Potential savings</span><span class="bar-val">${fmt$(stats.totalSavingsFound)}</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:${savingsRate}%"></div></div>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+      `}
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="alert alert-error"><span class="alert-icon">⚠</span><span>${e.message}</span></div>`;
+  }
+}
+
+// ── Audit page ─────────────────────────────────────────────────────────────────
+let selectedFile = null;
+let lastReport = null;
+let settingVal = '';
+
+// Setting toggle
+document.querySelectorAll('#settingToggle .toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#settingToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settingVal = btn.dataset.val;
+  });
+});
+
+// File upload
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const auditBtn = document.getElementById('auditBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+function setFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  uploadZone.classList.add('has-file');
+  document.getElementById('uploadTitle').textContent = file.name;
+  document.getElementById('uploadSub').textContent =
+    (file.size / 1024).toFixed(1) + ' KB — ' + file.type;
+  auditBtn.disabled = false;
+}
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) setFile(e.target.files[0]);
+});
+
+// Drag and drop
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+
+// Keyboard accessibility
+uploadZone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+});
+
+// Clear
+clearBtn.addEventListener('click', () => {
+  selectedFile = null;
+  fileInput.value = '';
+  uploadZone.classList.remove('has-file');
+  document.getElementById('uploadTitle').textContent = 'Drop your bill here';
+  document.getElementById('uploadSub').textContent = 'or click to browse — JSON, PDF, JPG, PNG';
+  auditBtn.disabled = true;
+  document.getElementById('auditResults').style.display = 'none';
+  document.getElementById('auditLoading').style.display = 'none';
+  document.getElementById('connError').style.display = 'none';
+});
+
+// Run audit
+auditBtn.addEventListener('click', runAudit);
+
+async function runAudit() {
+  if (!selectedFile) return;
+
+  const loading = document.getElementById('auditLoading');
+  const results = document.getElementById('auditResults');
+  const connErr = document.getElementById('connError');
+
+  loading.style.display = 'flex';
+  results.style.display = 'none';
+  connErr.style.display = 'none';
+  auditBtn.disabled = true;
+  document.getElementById('loadingMsg').textContent = 'Scanning bill against CMS rates…';
+
+  try {
+    const params = new URLSearchParams();
+    const zip = document.getElementById('zipInput').value.trim();
+    const plan = document.getElementById('planSelect').value;
+    const charity = document.getElementById('charityCheck').checked;
+    if (zip) params.set('zip', zip);
+    if (settingVal) params.set('setting', settingVal);
+    if (charity) params.set('charity', 'true');
+    if (plan) params.set('plan', plan);
+
+    const qs = params.toString();
+    let url = '/api/audit' + (qs ? '?' + qs : '');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    const res = await fetch(url, { method: 'POST', body: formData });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      throw new Error(err.error || 'Audit failed');
+    }
+
+    const report = await res.json();
+    lastReport = report;
+    renderResults(report);
+  } catch (err) {
+    loading.style.display = 'none';
+    if (err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+      connErr.style.display = 'flex';
+    } else {
+      connErr.style.display = 'flex';
+      connErr.querySelector('div').innerHTML =
+        '<strong>Audit failed:</strong> ' + escHtml(err.message);
+    }
+  } finally {
+    auditBtn.disabled = false;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderResults(report) {
+  const loading = document.getElementById('auditLoading');
+  const results = document.getElementById('auditResults');
+
+  loading.style.display = 'none';
+  results.style.display = 'block';
+
+  // Summary cards
+  const savings = report.totalPotentialSavings;
+  const savingsColor = savings > 0 ? 'var(--red)' : 'var(--green)';
+  const savingsLabel = savings > 0 ? 'Potential Savings' : 'Under CMS Rate';
+  const mult = report.summary.averageMultiplier;
+
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Billed</div>
+      <div class="stat-value">${fmt$(report.totalBilled)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">CMS Baseline</div>
+      <div class="stat-value">${fmt$(report.totalCmsBaseline)}</div>
+      <div class="stat-sub">Official Medicare rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">${savingsLabel}</div>
+      <div class="stat-value" style="color:${savingsColor}">${fmt$(Math.abs(savings))}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Multiplier</div>
+      <div class="stat-value ${mult ? 'mult-bar ' + multClass(mult) : ''}">${fmtMult(mult)}</div>
+      <div class="stat-sub">vs CMS rate</div>
+    </div>
+  `;
+
+  // Match row
+  document.getElementById('matchRow').innerHTML = `
+    <span class="pill pill-green">✓ ${report.matchedLineCount} matched</span>
+    ${report.unmatchedLineCount ? `<span class="pill pill-gray">? ${report.unmatchedLineCount} unmatched</span>` : ''}
+    ${report.facilityName ? `<span style="font-size:13px;color:var(--text-muted)">${escHtml(report.facilityName)}</span>` : ''}
+    ${report.facilityType ? `<span class="badge badge-none">${report.facilityType}</span>` : ''}
+  `;
+
+  // Desktop table
+  const findings = report.findings || [];
+  const ic2 = report.insuranceComparison;
+  const compMap = {};
+  if (ic2 && ic2.comparisons) {
+    ic2.comparisons.forEach(c => { compMap[c.cptCode] = c; });
+  }
+  const hasIns = !!(ic2 && ic2.comparisons && ic2.comparisons.length > 0);
+
+  const tableHtml = `
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>CPT</th>
+          <th>Description</th>
+          <th>Billed</th>
+          <th>CMS Facility</th>
+          <th>CMS Non-Fac</th>
+          ${hasIns ? '<th>Ins. Allowed</th>' : ''}
+          <th>Delta</th>
+          <th>Mult</th>
+          <th>Source</th>
+          <th>Match</th>
+          <th>Severity</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${findings.map(f => {
+          const delta = f.overchargeAmount;
+          const deltaClass = delta > 0 ? 'td-overcharge' : delta < 0 ? 'td-ok' : 'td-neutral';
+          const deltaSign = delta > 0 ? '+' : '';
+          const comp = compMap[f.cptCode];
+          const insAllowed = comp ? (comp.actualAllowed ?? comp.estimatedAllowed?.national_avg) : null;
+          return `<tr>
+            <td class="td-neutral">${f.lineNumber}</td>
+            <td class="td-code">${escHtml(f.cptCode)}${f.modifier ? '<span style="font-size:10px;color:var(--text-muted)"> '+escHtml(f.modifier)+'</span>' : ''}</td>
+            <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(f.description)}">${escHtml(f.description)}</td>
+            <td class="td-amount">${fmt$(f.billedAmount)}</td>
+            <td class="td-amount td-neutral">${fmt$(f.cmsFacilityRate)}</td>
+            <td class="td-amount td-neutral">${fmt$(f.cmsNonFacilityRate)}</td>
+            ${hasIns ? `<td class="td-amount" style="color:var(--yellow)">${fmt$(insAllowed)}</td>` : ''}
+            <td class="td-amount ${deltaClass}">${delta != null ? deltaSign + fmt$(delta) : '—'}</td>
+            <td class="${'mult-bar ' + multClass(f.overchargeMultiplier)}">${fmtMult(f.overchargeMultiplier)}</td>
+            <td><span class="source-tag ${sourceClass(f.rateSource)}">${f.rateSource ? f.rateSource.toUpperCase() : '—'}</span></td>
+            <td class="td-neutral" style="font-size:11px">${matchModeLabel(f.matchMode)}</td>
+            <td><span class="badge ${severityClass(f.severity)}">${f.severity || 'n/a'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('findingsTable').innerHTML = tableHtml;
+
+  // Mobile cards
+  const cardsHtml = findings.map(f => {
+    const delta = f.overchargeAmount;
+    const deltaClass = delta > 0 ? 'td-overcharge' : delta < 0 ? 'td-ok' : 'td-neutral';
+    const deltaSign = delta > 0 ? '+' : '';
+    const comp3 = compMap[f.cptCode];
+    const insAllowed3 = comp3 ? (comp3.actualAllowed ?? comp3.estimatedAllowed?.national_avg) : null;
+    return `
+      <div class="finding-card">
+        <div class="finding-card-header">
+          <div>
+            <div class="finding-card-code">${escHtml(f.cptCode)}${f.modifier ? ' · ' + escHtml(f.modifier) : ''}</div>
+            <div class="finding-card-desc">${escHtml(f.description)}</div>
+          </div>
+          <span class="badge ${severityClass(f.severity)}">${f.severity || 'n/a'}</span>
+        </div>
+        <div class="finding-card-rows">
+          <div class="finding-card-row">
+            <span class="fcr-label">Billed</span>
+            <span class="fcr-val">${fmt$(f.billedAmount)}</span>
+          </div>
+          <div class="finding-card-row">
+            <span class="fcr-label">CMS Rate (used)</span>
+            <span class="fcr-val td-neutral">${fmt$(f.cmsRateUsed)}</span>
+          </div>
+          ${hasIns ? `
+          <div class="finding-card-row">
+            <span class="fcr-label">Ins. Allowed</span>
+            <span class="fcr-val" style="color:var(--yellow)">${fmt$(insAllowed3)}</span>
+          </div>` : ''}
+          <div class="finding-card-row">
+            <span class="fcr-label">Delta</span>
+            <span class="fcr-val ${deltaClass}">${delta != null ? deltaSign + fmt$(delta) : '—'}</span>
+          </div>
+          <div class="finding-card-row">
+            <span class="fcr-label">Multiplier</span>
+            <span class="fcr-val ${('mult-bar ' + multClass(f.overchargeMultiplier)).trim()}">${fmtMult(f.overchargeMultiplier)}</span>
+          </div>
+          <div class="finding-card-row">
+            <span class="fcr-label">Source</span>
+            <span><span class="source-tag ${sourceClass(f.rateSource)}">${f.rateSource ? f.rateSource.toUpperCase() : '—'}</span></span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('findingCards').innerHTML = cardsHtml || '<p style="color:var(--text-muted);font-size:14px">No findings.</p>';
+
+  // Charity section
+  const charityEl = document.getElementById('charitySection');
+  if (report.charityCheck) {
+    const c = report.charityCheck;
+    charityEl.style.display = 'block';
+    charityEl.innerHTML = `
+      <div class="charity-card ${c.isNonprofit ? 'nonprofit' : ''}">
+        <h3 style="margin-bottom:10px">${c.isNonprofit ? '🏥 Nonprofit Hospital Found' : 'Charity Care Status'}</h3>
+        ${c.isNonprofit ? `
+          <p style="font-size:14px;margin-bottom:10px">
+            <strong>${escHtml(c.hospitalName || '')}</strong> is a registered 501(c)(3) nonprofit hospital.
+            ${c.ein ? `<span style="color:var(--text-muted);font-size:12px"> EIN: ${escHtml(c.ein)}</span>` : ''}
+          </p>
+        ` : ''}
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:6px">
+          ${c.advice.map(a => `<li style="font-size:13px;color:var(--text-muted);line-height:1.5">• ${escHtml(a)}</li>`).join('')}
+        </ul>
+        ${c.fapUrl ? `<a href="${escHtml(c.fapUrl)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="margin-top:12px">View Financial Assistance Policy</a>` : ''}
+      </div>
+    `;
+  } else {
+    charityEl.style.display = 'none';
+  }
+
+  // Transparency stamp
+  const stamp = report.stamp;
+  document.getElementById('stampBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:13px">
+      <div><span style="color:var(--text-muted)">Report ID: </span><span style="font-family:var(--font-mono);font-size:11px;word-break:break-all">${stamp.reportId}</span></div>
+      <div><span style="color:var(--text-muted)">CMS Year: </span><strong>${stamp.cmsEffectiveYear}</strong></div>
+      <div><span style="color:var(--text-muted)">Tool Version: </span><strong>${stamp.toolVersion}</strong></div>
+      <div><span style="color:var(--text-muted)">Generated: </span>${new Date(stamp.generatedAt).toLocaleString()}</div>
+      <div><span style="color:var(--text-muted)">Data Sources: </span>${(stamp.dataSources || []).join(', ') || 'PFS'}</div>
+      <div><span style="color:var(--text-muted)">Input Hash: </span><span style="font-family:var(--font-mono);font-size:10px;word-break:break-all">${stamp.inputHash}</span></div>
+    </div>
+  `;
+
+  // ── 3-Way Insurance Comparison ──────────────────────────────────────────────
+  const insSection = document.getElementById('insuranceSection');
+  const ic = report.insuranceComparison;
+
+  if (ic) {
+    insSection.style.display = 'block';
+    renderInsuranceComparison(report, ic);
+  } else {
+    insSection.style.display = 'none';
+  }
+}
+
+function renderInsuranceComparison(report, ic) {
+  const planLabels = { hmo: 'HMO', ppo: 'PPO', oon: 'Out-of-Network' };
+
+  // EOB banner
+  const eobData = report.eobData;
+  const bannerEl = document.getElementById('eobBanner');
+  if (report.isEob && eobData) {
+    bannerEl.innerHTML = `
+      <div class="eob-banner">
+        <span class="eob-banner-icon">&#x1F4CB;</span>
+        <div class="eob-banner-text">
+          <strong>EOB Detected</strong> &mdash;
+          ${eobData.insurerName ? escHtml(eobData.insurerName) : 'Unknown insurer'}
+          ${eobData.planType ? ' (' + escHtml(eobData.planType) + ')' : ''}
+          ${eobData.claimNumber ? ' &middot; Claim ' + escHtml(eobData.claimNumber) : ''}
+          ${eobData.dateOfService ? ' &middot; DOS ' + escHtml(eobData.dateOfService) : ''}
+        </div>
+      </div>
+    `;
+  } else if (ic.plan) {
+    bannerEl.innerHTML = `
+      <div class="eob-banner">
+        <span class="eob-banner-icon">&#x1F4CA;</span>
+        <div class="eob-banner-text">
+          <strong>Insurance Estimate</strong> &mdash;
+          Showing estimated ${planLabels[ic.plan] || ic.plan} allowed amounts based on KFF/RAND research
+        </div>
+      </div>
+    `;
+  } else {
+    bannerEl.innerHTML = '';
+  }
+
+  // Comparison summary cards
+  const totalBilled = report.totalBilled;
+  const totalCms = report.totalCmsBaseline;
+  const totalInsurance = ic.totalActualAllowed ?? ic.totalEstimatedAllowed;
+  const totalOwe = ic.totalPatientResponsibility;
+  const isEstimate = ic.totalActualAllowed == null;
+
+  document.getElementById('comparisonCards').innerHTML = `
+    <div class="comparison-card cc-billed">
+      <div class="cc-label">Hospital Billed</div>
+      <div class="cc-value" style="color:var(--red)">${fmt$(totalBilled)}</div>
+    </div>
+    <div class="comparison-card cc-cms">
+      <div class="cc-label">CMS Medicare Rate</div>
+      <div class="cc-value" style="color:var(--blue)">${fmt$(totalCms)}</div>
+    </div>
+    <div class="comparison-card cc-insur">
+      <div class="cc-label">${isEstimate ? 'Est. Insurance Allowed' : 'Insurance Allowed'}</div>
+      <div class="cc-value" style="color:var(--yellow)">${totalInsurance != null ? fmt$(totalInsurance) : '—'}</div>
+      ${isEstimate && ic.plan ? '<div class="cc-sub">Estimate (' + (planLabels[ic.plan] || ic.plan) + ')</div>' : ''}
+    </div>
+    <div class="comparison-card cc-owe">
+      <div class="cc-label">${totalOwe != null ? 'Patient Responsibility' : 'Potential Savings'}</div>
+      <div class="cc-value" style="color:var(--green)">${totalOwe != null ? fmt$(totalOwe) : fmt$(report.totalPotentialSavings)}</div>
+      ${totalOwe != null ? '<div class="cc-sub">Per EOB</div>' : '<div class="cc-sub">vs CMS rate</div>'}
+    </div>
+  `;
+
+  // Comparison bar chart
+  const maxVal = Math.max(totalBilled, totalCms || 0, totalInsurance || 0, 1);
+  const pctBilled = ((totalBilled / maxVal) * 100).toFixed(1);
+  const pctCms = totalCms ? ((totalCms / maxVal) * 100).toFixed(1) : '0';
+  const pctIns = totalInsurance ? ((totalInsurance / maxVal) * 100).toFixed(1) : '0';
+
+  document.getElementById('comparisonBarChart').innerHTML = `
+    <h3 style="margin-bottom:16px">Rate Comparison</h3>
+    <div class="comparison-bar-section">
+      <div class="comparison-bar-row">
+        <span class="comparison-bar-label">Billed</span>
+        <div class="comparison-bar-track">
+          <div class="comparison-bar-fill bar-billed" style="width:${pctBilled}%">${fmt$(totalBilled)}</div>
+        </div>
+      </div>
+      <div class="comparison-bar-row">
+        <span class="comparison-bar-label">CMS Medicare</span>
+        <div class="comparison-bar-track">
+          <div class="comparison-bar-fill bar-cms" style="width:${pctCms}%">${fmt$(totalCms)}</div>
+        </div>
+      </div>
+      ${totalInsurance != null ? `
+      <div class="comparison-bar-row">
+        <span class="comparison-bar-label">${isEstimate ? 'Est. Allowed' : 'Ins. Allowed'}</span>
+        <div class="comparison-bar-track">
+          <div class="comparison-bar-fill bar-insur" style="width:${pctIns}%">${fmt$(totalInsurance)}</div>
+        </div>
+      </div>` : ''}
+      ${totalOwe != null ? `
+      <div class="comparison-bar-row">
+        <span class="comparison-bar-label">You Owe</span>
+        <div class="comparison-bar-track">
+          <div class="comparison-bar-fill bar-owe" style="width:${((totalOwe / maxVal) * 100).toFixed(1)}%">${fmt$(totalOwe)}</div>
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+
+  // Insights
+  const insightsEl = document.getElementById('insightsSection');
+  if (ic.insights && ic.insights.length > 0) {
+    const insightIcons = { info: 'ℹ', warning: '⚠', alert: '🚨' };
+    insightsEl.innerHTML = `
+      <div class="card">
+        <h3 style="margin-bottom:12px">Insurance Insights</h3>
+        <div class="insight-list">
+          ${ic.insights.map(i => `
+            <div class="insight-item insight-${i.type}">
+              <span class="insight-icon">${insightIcons[i.type] || 'ℹ'}</span>
+              <span><strong>${escHtml(i.cptCode)}</strong>: ${escHtml(i.message)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    insightsEl.innerHTML = '';
+  }
+
+  // Footnote
+  const footnoteEl = document.getElementById('comparisonFootnote');
+  if (ic.footnote) {
+    footnoteEl.textContent = ic.footnote;
+  } else {
+    footnoteEl.textContent = '';
+  }
+}
+
+// Export JSON
+document.getElementById('exportJsonBtn').addEventListener('click', () => {
+  if (!lastReport) return;
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'billscan-report-' + (lastReport.stamp?.reportId?.slice(0,8) || 'report') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Initial data load on home page
+loadHomeSources();
+</script>
+</body>
+</html>

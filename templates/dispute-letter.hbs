@@ -1,0 +1,39 @@
+{{currentDate}}
+
+{{facilityName}}
+Billing Department
+{{facilityAddress}}
+
+Re: Dispute of Medical Bill — Statement Date {{statementDate}}
+Patient Account: {{patientAccount}}
+
+Dear Billing Department,
+
+I am writing to formally dispute charges on my recent medical bill. After reviewing my statement against the Centers for Medicare & Medicaid Services (CMS) {{cmsYear}} Physician Fee Schedule, I have identified significant discrepancies between the amounts billed and established Medicare reimbursement rates.
+
+The following charges appear to substantially exceed CMS baseline rates:
+
+{{#each topFindings}}
+- {{this.cptCode}} ({{this.description}}): Billed ${{this.billedAmount}}, CMS {{this.rateContext}} rate: ${{this.cmsRateUsed}} — a {{this.overchargeMultiplier}}x markup
+{{/each}}
+
+Total billed: ${{totalBilled}}
+CMS baseline total: ${{totalCmsBaseline}}
+Identified potential overcharges: ${{totalSavings}}
+
+I respectfully request:
+1. An itemized bill with CPT/HCPCS codes for all charges
+2. A written explanation for charges exceeding 3x the CMS fee schedule rate
+3. Adjustment of charges to a reasonable rate consistent with fair market pricing
+4. Information about financial assistance or charity care programs
+
+This analysis was generated using publicly available CMS fee schedule data (source: {{cmsSourceUrl}}, effective {{cmsYear}}). Report ID: {{reportId}}.
+
+I look forward to your response within 30 days as required by the No Surprises Act.
+
+Sincerely,
+[Patient Name]
+[Contact Information]
+
+---
+Audit verification: billscan.dev/verify/{{reportId}}

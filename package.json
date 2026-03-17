@@ -1,0 +1,32 @@
+{
+  "name": "billscan",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "billscan": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/server-start.ts",
+    "dev": "tsx --watch src/server-start.ts",
+    "cli": "tsx src/cli.ts",
+    "fetch-cms": "tsx scripts/fetch-cms.ts",
+    "audit": "tsx src/cli.ts audit",
+    "test": "node --import tsx/esm --test tests/*.test.ts",
+    "test:watch": "node --import tsx/esm --test --watch tests/*.test.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.0",
+    "@libsql/client": "^0.17.0",
+    "commander": "^12.0.0",
+    "pdf-parse": "^1.1.1",
+    "tesseract.js": "^5.0.0",
+    "handlebars": "^4.7.0",
+    "adm-zip": "^0.5.10"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/pdf-parse": "^1.1.0",
+    "@types/adm-zip": "^0.5.0",
+    "tsx": "^4.7.0"
+  },
+  "engines": { "node": ">=20.0.0" }
+}
