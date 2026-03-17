@@ -40,7 +40,7 @@ jobs:
         run: npx tsx src/cli.ts --help
       
       - name: Verify imports
-        run: npx tsx -e "import './src/index.js'; console.log('Imports OK')"
+        run: npx tsx -e "async function main() { await import('./src/index.js'); console.log('Imports OK'); } main();"
 
   build-check:
     runs-on: ubuntu-latest
