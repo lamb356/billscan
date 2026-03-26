@@ -207,4 +207,25 @@ export async function runMigrations(): Promise<void> {
     { sql: `CREATE INDEX IF NOT EXISTS idx_users_stripe ON users(stripe_customer_id)`, args: [] },
     { sql: `CREATE INDEX IF NOT EXISTS idx_audits_user ON audits(user_id)`, args: [] },
   ]);
+
+  // Community-contributed price data
+  await db.batch([
+    {
+      sql: `CREATE TABLE IF NOT EXISTS community_prices (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        billing_code    TEXT NOT NULL,
+        description     TEXT,
+        amount_paid     REAL NOT NULL,
+        payer_name      TEXT,
+        plan_type       TEXT,
+        facility_name   TEXT,
+        facility_zip    TEXT,
+        date_of_service TEXT,
+        is_insured      INTEGER DEFAULT 1,
+        submitted_at    TEXT DEFAULT (datetime('now'))
+      )`, args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_community_code ON community_prices(billing_code)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_community_zip ON community_prices(facility_zip)`, args: [] },
+  ]);
 }

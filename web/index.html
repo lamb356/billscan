@@ -1333,6 +1333,145 @@
     }
     .bb-action strong { color: var(--accent); }
 
+    /* ─── Hospital Prices Section ─────────────────────────────────── */
+    .hp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .hp-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .hp-card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .hp-card-code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .hp-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .hp-bar-label {
+      width: 140px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .hp-bar-track {
+      flex: 1;
+      height: 14px;
+      background: var(--surface2);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .hp-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+      min-width: 2px;
+    }
+    .hp-bar-val {
+      width: 80px;
+      text-align: right;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+    }
+    .hp-savings-note {
+      font-size: 12px;
+      color: var(--green);
+      font-weight: 600;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: var(--green-bg);
+      border-radius: var(--radius-sm);
+      display: inline-block;
+    }
+
+    /* ─── Bulk Upload ──────────────────────────────────────────────── */
+    .bulk-progress {
+      margin-top: 20px;
+    }
+    .bulk-progress-bar {
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .bulk-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 100px;
+      transition: width 0.3s ease;
+    }
+    .bulk-progress-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .bulk-results { margin-top: 24px; }
+    .bulk-result-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .bulk-result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .bulk-result-header:hover { background: rgba(255,255,255,0.02); }
+    .bulk-result-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bulk-result-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .bulk-result-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+    }
+    .bulk-result-stat {
+      color: var(--text-muted);
+    }
+    .bulk-result-stat strong {
+      color: var(--text);
+    }
+    .bulk-result-body {
+      padding: 0 16px 16px;
+      display: none;
+      border-top: 1px solid var(--border);
+    }
+    .bulk-result-body.open { display: block; }
+    .bulk-result-chevron {
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .bulk-result-chevron.open { transform: rotate(180deg); }
+
     /* ─── Appeal / Download Buttons ───────────────────────────────── */
     .action-buttons-row {
       display: flex;
@@ -1353,6 +1492,18 @@
       border: 1px solid rgba(88,166,255,0.3);
     }
     .btn-phone:hover { background: rgba(88,166,255,0.15); }
+    .btn-dispute {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+      border: 1px solid rgba(227,179,65,0.3);
+    }
+    .btn-dispute:hover { background: rgba(227,179,65,0.15); }
+    .btn-pdf {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(248,81,73,0.3);
+    }
+    .btn-pdf:hover { background: rgba(248,81,73,0.15); }
 
     /* ─── New Section Headers ─────────────────────────────────────── */
     .new-section {
@@ -1532,6 +1683,118 @@
       font-weight: 600;
       margin-bottom: 20px;
     }
+
+    /* ─── History page ─────────────────────────────────────────── */
+    .history-totals {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .history-table th {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .history-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-table tr { cursor: pointer; transition: background .15s; }
+    .history-table tr:hover { background: var(--card-bg); }
+    .history-table .sev-high { color: var(--danger); font-weight: 600; }
+    .history-table .sev-med { color: var(--warning); font-weight: 600; }
+    .history-table .sev-low { color: var(--accent); }
+    .history-delete-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--danger);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .history-delete-btn:hover { background: rgba(248,81,73,0.1); }
+
+    /* ─── Community page ───────────────────────────────────────── */
+    .insurer-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .insurer-link {
+      display: flex;
+      flex-direction: column;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .insurer-link:hover {
+      border-color: var(--accent);
+      background: var(--card-bg);
+    }
+    .insurer-link strong { font-size: 14px; margin-bottom: 4px; }
+    .insurer-link span { font-size: 12px; color: var(--text-muted); }
+    .cp-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .cp-stat {
+      text-align: center;
+      padding: 12px;
+      background: var(--card-bg);
+      border-radius: 8px;
+    }
+    .cp-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+    .cp-stat-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    .cp-price-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .cp-price-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cp-price-item:last-child { border-bottom: none; }
+    .mrf-match {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .mrf-match-score {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .mrf-match-score.high { background: rgba(63,185,80,0.15); color: var(--accent); }
+    .mrf-match-score.med { background: rgba(210,153,34,0.15); color: var(--warning); }
+    .mrf-match-score.low { background: rgba(139,148,158,0.15); color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -1553,6 +1816,8 @@
     <a href="#/how-it-works" class="nav-link" data-page="how-it-works">How It Works</a>
     <a href="#/stats" class="nav-link" data-page="stats">Stats</a>
     <a href="#/get-records" class="nav-link" data-page="get-records">Get Records</a>
+    <a href="#/history" class="nav-link" data-page="history">History</a>
+    <a href="#/community" class="nav-link" data-page="community">Community</a>
   </div>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
     <svg id="hamburgerIcon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -1566,6 +1831,8 @@
   <a href="#/how-it-works" class="nav-link" data-page="how-it-works" role="menuitem">How It Works</a>
   <a href="#/stats" class="nav-link" data-page="stats" role="menuitem">Stats</a>
   <a href="#/get-records" class="nav-link" data-page="get-records" role="menuitem">Get Records</a>
+  <a href="#/history" class="nav-link" data-page="history" role="menuitem">History</a>
+  <a href="#/community" class="nav-link" data-page="community" role="menuitem">Community</a>
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -1701,6 +1968,12 @@
             <span>Check charity care / nonprofit status</span>
           </label>
         </div>
+        <div style="margin-top:8px">
+          <label class="checkbox-row">
+            <input type="checkbox" id="bulkUploadCheck">
+            <span>Upload multiple bills (bulk mode)</span>
+          </label>
+        </div>
         <hr class="divider">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-primary" id="auditBtn" disabled>
@@ -1779,6 +2052,12 @@
       <!-- Balance Billing (new) -->
       <div id="balanceBillingSection" style="display:none;margin-top:24px"></div>
 
+      <!-- Hospital Prices (new) -->
+      <div id="hospitalPricesSection" style="display:none;margin-top:24px"></div>
+
+      <!-- Auto Charity Care (new) -->
+      <div id="autoCharitySection" style="display:none;margin-top:24px"></div>
+
       <!-- Action Buttons (new) -->
       <div id="actionButtonsSection" style="display:none;margin-top:24px"></div>
 
@@ -1792,6 +2071,22 @@
       </div>
 
     </div><!-- /auditResults -->
+
+    <!-- Bulk upload progress -->
+    <div id="bulkProgress" style="display:none;margin-top:24px">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="spinner"></div>
+          <span class="bulk-progress-text" id="bulkProgressText">Processing bill 1 of 1...</span>
+        </div>
+        <div class="bulk-progress-bar">
+          <div class="bulk-progress-fill" id="bulkProgressFill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk results -->
+    <div id="bulkResults" style="display:none;margin-top:24px"></div>
 
   </div>
 </div>
@@ -2326,6 +2621,171 @@ Date of Birth: [DOB]</div>
   </footer>
 </div>
 
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- HISTORY PAGE                                                            -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-history">
+  <div class="container" style="padding-top:32px;padding-bottom:64px">
+    <h2 style="margin-bottom:6px">Audit History</h2>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px">
+      All audits saved automatically. Click any row to view the full report.
+    </p>
+
+    <!-- Running totals -->
+    <div id="historyTotals" class="history-totals" style="display:none">
+      <div class="summary-card"><div class="summary-label">Total Audits</div><div class="summary-value" id="htAuditCount">—</div></div>
+      <div class="summary-card"><div class="summary-label">Total Billed</div><div class="summary-value" id="htTotalBilled">—</div></div>
+      <div class="summary-card"><div class="summary-label">Total CMS Baseline</div><div class="summary-value" id="htTotalCms">—</div></div>
+      <div class="summary-card"><div class="summary-label">Total Savings Found</div><div class="summary-value savings" id="htTotalSavings">—</div></div>
+    </div>
+
+    <!-- Audit list -->
+    <div id="historyContent">
+      <div class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-msg">Loading history…</div>
+      </div>
+    </div>
+    <div id="historyPagination" style="display:none;text-align:center;margin-top:20px">
+      <button class="btn" id="historyPrevBtn" style="margin-right:8px" disabled>← Previous</button>
+      <span id="historyPageInfo" style="font-size:14px;color:var(--text-muted)"></span>
+      <button class="btn" id="historyNextBtn" style="margin-left:8px" disabled>Next →</button>
+    </div>
+
+    <!-- Detail view (expandable) -->
+    <div id="historyDetail" style="display:none;margin-top:24px">
+      <button class="btn" id="historyBackBtn" style="margin-bottom:16px">← Back to list</button>
+      <div id="historyDetailContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- COMMUNITY PAGE                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-community">
+  <div class="container" style="padding-top:32px;padding-bottom:64px">
+    <h2 style="margin-bottom:6px">Community Price Data</h2>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px">
+      Share what you actually paid. Help others understand real healthcare costs.
+    </p>
+
+    <!-- Contribute form -->
+    <div class="card" style="margin-bottom:32px">
+      <h3 style="margin-bottom:16px">Contribute a Price</h3>
+      <form id="communityForm" style="display:grid;gap:12px;grid-template-columns:1fr 1fr">
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">CPT/HCPCS Code *</label>
+          <input type="text" id="cpBillingCode" class="input" placeholder="e.g. 99213" required>
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Amount Paid *</label>
+          <input type="number" step="0.01" id="cpAmountPaid" class="input" placeholder="e.g. 250.00" required>
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Description</label>
+          <input type="text" id="cpDescription" class="input" placeholder="e.g. Office visit, level 3">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Payer / Insurance</label>
+          <input type="text" id="cpPayerName" class="input" placeholder="e.g. Blue Cross Blue Shield">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Plan Type</label>
+          <select id="cpPlanType" class="input">
+            <option value="">Select…</option>
+            <option value="hmo">HMO</option>
+            <option value="ppo">PPO</option>
+            <option value="epo">EPO</option>
+            <option value="pos">POS</option>
+            <option value="hdhp">HDHP</option>
+            <option value="cash">Cash / Self-pay</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Facility Name</label>
+          <input type="text" id="cpFacilityName" class="input" placeholder="e.g. Mount Sinai">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Facility ZIP</label>
+          <input type="text" id="cpFacilityZip" class="input" placeholder="e.g. 10029" maxlength="5" pattern="[0-9]{5}">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Date of Service</label>
+          <input type="date" id="cpDateOfService" class="input">
+        </div>
+        <div style="grid-column: 1 / -1;display:flex;align-items:center;gap:16px">
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="cpIsInsured" checked> I had insurance
+          </label>
+          <button type="submit" class="btn" style="margin-left:auto">Submit Price</button>
+        </div>
+      </form>
+      <div id="cpResult" style="display:none;margin-top:12px"></div>
+    </div>
+
+    <!-- Search community prices -->
+    <div class="card" style="margin-bottom:32px">
+      <h3 style="margin-bottom:16px">Search Community Prices</h3>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="cpSearchCode" class="input" placeholder="CPT code, e.g. 99213" style="flex:1">
+        <button class="btn" id="cpSearchBtn">Search</button>
+      </div>
+      <div id="cpSearchResults" style="display:none"></div>
+    </div>
+
+    <!-- Hospital Price Finder -->
+    <div class="card" style="margin-bottom:32px">
+      <h3 style="margin-bottom:16px">Hospital Price Finder</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+        Search for a hospital to find their published price transparency file (MRF).
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="mrfSearchHospital" class="input" placeholder="Hospital name, e.g. Mayo Clinic" style="flex:1">
+        <input type="text" id="mrfSearchState" class="input" placeholder="State (optional)" maxlength="2" style="width:80px">
+        <button class="btn" id="mrfSearchBtn">Find</button>
+      </div>
+      <div id="mrfSearchResults" style="display:none"></div>
+    </div>
+
+    <!-- Insurer API Links -->
+    <div class="card">
+      <h3 style="margin-bottom:16px">Insurance Company Price Tools</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        Under the Transparency in Coverage Rule, insurers must publish machine-readable files of negotiated rates.
+        Use these links to look up what your insurer pays for specific procedures.
+      </p>
+      <div class="insurer-links">
+        <a href="https://www.anthem.com/machine-readable-file/search/" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Anthem / Elevance</strong><span>MRF Search Tool</span>
+        </a>
+        <a href="https://www.uhc.com/legal/machine-readable-files" target="_blank" rel="noopener" class="insurer-link">
+          <strong>UnitedHealthcare</strong><span>Machine-Readable Files</span>
+        </a>
+        <a href="https://www.cigna.com/legal/compliance/machine-readable-files" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Cigna</strong><span>MRF Portal</span>
+        </a>
+        <a href="https://www.aetna.com/individuals-families/member-rights-resources/rights/disclosure-information.html" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Aetna / CVS Health</strong><span>Transparency Files</span>
+        </a>
+        <a href="https://www.humana.com/legal/machine-readable-files" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Humana</strong><span>Machine-Readable Files</span>
+        </a>
+        <a href="https://www.kp.org/mrfs" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Kaiser Permanente</strong><span>MRF Directory</span>
+        </a>
+        <a href="https://www.bcbs.com/member" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Blue Cross Blue Shield</strong><span>Find Your Plan</span>
+        </a>
+        <a href="https://www.molina.com/members/machine-readable" target="_blank" rel="noopener" class="insurer-link">
+          <strong>Molina Healthcare</strong><span>Machine-Readable Files</span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <script>
 /* ============================================================================
    BillScan SPA — Vanilla JS
@@ -2350,6 +2810,8 @@ const pages = {
   '/how-it-works'  : 'how-it-works',
   '/stats'         : 'stats',
   '/get-records'   : 'get-records',
+  '/history'       : 'history',
+  '/community'     : 'community',
 };
 
 function getRoute() {
@@ -2374,6 +2836,7 @@ function navigate(route) {
   // Lazy load data for pages
   if (pageName === 'stats') loadStats();
   if (pageName === 'home') loadHomeSources();
+  if (pageName === 'history') loadHistory();
 }
 
 window.addEventListener('hashchange', () => navigate(getRoute()));
@@ -2568,6 +3031,26 @@ const uploadZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
 const auditBtn = document.getElementById('auditBtn');
 const clearBtn = document.getElementById('clearBtn');
+const bulkCheck = document.getElementById('bulkUploadCheck');
+let selectedFiles = [];
+
+// Bulk upload toggle
+bulkCheck.addEventListener('change', () => {
+  const isBulk = bulkCheck.checked;
+  fileInput.multiple = isBulk;
+  if (isBulk) {
+    document.getElementById('uploadSub').textContent = 'or click to browse — select multiple files';
+  } else {
+    document.getElementById('uploadSub').textContent = 'or click to browse — JSON, PDF, JPG, PNG';
+  }
+  // Reset
+  selectedFile = null;
+  selectedFiles = [];
+  fileInput.value = '';
+  uploadZone.classList.remove('has-file');
+  document.getElementById('uploadTitle').textContent = 'Drop your bill here';
+  auditBtn.disabled = true;
+});
 
 function setFile(file) {
   if (!file) return;
@@ -2579,8 +3062,23 @@ function setFile(file) {
   auditBtn.disabled = false;
 }
 
+function setFiles(files) {
+  selectedFiles = Array.from(files);
+  selectedFile = selectedFiles[0];
+  uploadZone.classList.add('has-file');
+  document.getElementById('uploadTitle').textContent = selectedFiles.length + ' files selected';
+  const totalSize = selectedFiles.reduce((s, f) => s + f.size, 0);
+  document.getElementById('uploadSub').textContent =
+    (totalSize / 1024).toFixed(1) + ' KB total';
+  auditBtn.disabled = false;
+}
+
 fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) setFile(e.target.files[0]);
+  if (bulkCheck.checked && e.target.files.length > 1) {
+    setFiles(e.target.files);
+  } else if (e.target.files[0]) {
+    setFile(e.target.files[0]);
+  }
 });
 
 // Drag and drop
@@ -2592,8 +3090,12 @@ uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag
 uploadZone.addEventListener('drop', e => {
   e.preventDefault();
   uploadZone.classList.remove('dragover');
-  const f = e.dataTransfer.files[0];
-  if (f) setFile(f);
+  if (bulkCheck.checked && e.dataTransfer.files.length > 1) {
+    setFiles(e.dataTransfer.files);
+  } else {
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  }
 });
 
 // Keyboard accessibility
@@ -2604,21 +3106,43 @@ uploadZone.addEventListener('keydown', e => {
 // Clear
 clearBtn.addEventListener('click', () => {
   selectedFile = null;
+  selectedFiles = [];
   fileInput.value = '';
   uploadZone.classList.remove('has-file');
   document.getElementById('uploadTitle').textContent = 'Drop your bill here';
-  document.getElementById('uploadSub').textContent = 'or click to browse — JSON, PDF, JPG, PNG';
+  document.getElementById('uploadSub').textContent = bulkCheck.checked
+    ? 'or click to browse — select multiple files'
+    : 'or click to browse — JSON, PDF, JPG, PNG';
   auditBtn.disabled = true;
   document.getElementById('auditResults').style.display = 'none';
   document.getElementById('auditLoading').style.display = 'none';
   document.getElementById('connError').style.display = 'none';
+  document.getElementById('bulkProgress').style.display = 'none';
+  document.getElementById('bulkResults').style.display = 'none';
 });
 
 // Run audit
 auditBtn.addEventListener('click', runAudit);
 
+function buildAuditParams() {
+  const params = new URLSearchParams();
+  const zip = document.getElementById('zipInput').value.trim();
+  const plan = document.getElementById('planSelect').value;
+  const charity = document.getElementById('charityCheck').checked;
+  if (zip) params.set('zip', zip);
+  if (settingVal) params.set('setting', settingVal);
+  if (charity) params.set('charity', 'true');
+  if (plan) params.set('plan', plan);
+  return params;
+}
+
 async function runAudit() {
   if (!selectedFile) return;
+
+  // Check for bulk mode
+  if (bulkCheck.checked && selectedFiles.length > 1) {
+    return runBulkAudit();
+  }
 
   const loading = document.getElementById('auditLoading');
   const results = document.getElementById('auditResults');
@@ -2627,19 +3151,13 @@ async function runAudit() {
   loading.style.display = 'flex';
   results.style.display = 'none';
   connErr.style.display = 'none';
+  document.getElementById('bulkProgress').style.display = 'none';
+  document.getElementById('bulkResults').style.display = 'none';
   auditBtn.disabled = true;
   document.getElementById('loadingMsg').textContent = 'Scanning bill against CMS rates…';
 
   try {
-    const params = new URLSearchParams();
-    const zip = document.getElementById('zipInput').value.trim();
-    const plan = document.getElementById('planSelect').value;
-    const charity = document.getElementById('charityCheck').checked;
-    if (zip) params.set('zip', zip);
-    if (settingVal) params.set('setting', settingVal);
-    if (charity) params.set('charity', 'true');
-    if (plan) params.set('plan', plan);
-
+    const params = buildAuditParams();
     const qs = params.toString();
     let url = '/api/audit' + (qs ? '?' + qs : '');
 
@@ -2668,6 +3186,182 @@ async function runAudit() {
   } finally {
     auditBtn.disabled = false;
   }
+}
+
+async function runBulkAudit() {
+  const loading = document.getElementById('auditLoading');
+  const results = document.getElementById('auditResults');
+  const connErr = document.getElementById('connError');
+  const bulkProgressEl = document.getElementById('bulkProgress');
+  const bulkResultsEl = document.getElementById('bulkResults');
+
+  loading.style.display = 'none';
+  results.style.display = 'none';
+  connErr.style.display = 'none';
+  bulkProgressEl.style.display = 'block';
+  bulkResultsEl.style.display = 'none';
+  auditBtn.disabled = true;
+
+  const params = buildAuditParams();
+  const qs = params.toString();
+  const url = '/api/audit' + (qs ? '?' + qs : '');
+
+  const reports = [];
+  const total = selectedFiles.length;
+
+  for (let i = 0; i < total; i++) {
+    document.getElementById('bulkProgressText').textContent =
+      `Processing bill ${i + 1} of ${total}...`;
+    document.getElementById('bulkProgressFill').style.width =
+      (((i) / total) * 100).toFixed(0) + '%';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFiles[i]);
+
+      const res = await fetch(url, { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Audit failed' }));
+        reports.push({ fileName: selectedFiles[i].name, error: err.error || 'Failed', report: null });
+      } else {
+        const report = await res.json();
+        reports.push({ fileName: selectedFiles[i].name, error: null, report });
+      }
+    } catch (err) {
+      reports.push({ fileName: selectedFiles[i].name, error: err.message, report: null });
+    }
+  }
+
+  document.getElementById('bulkProgressFill').style.width = '100%';
+  document.getElementById('bulkProgressText').textContent = `Done! Processed ${total} bills.`;
+
+  setTimeout(() => {
+    bulkProgressEl.style.display = 'none';
+    renderBulkResults(reports);
+  }, 500);
+
+  auditBtn.disabled = false;
+}
+
+function renderBulkResults(reports) {
+  const el = document.getElementById('bulkResults');
+  el.style.display = 'block';
+
+  const successful = reports.filter(r => r.report);
+  const failed = reports.filter(r => !r.report);
+
+  // Aggregate totals
+  const totalBilled = successful.reduce((s, r) => s + (r.report.totalBilled || 0), 0);
+  const totalCms = successful.reduce((s, r) => s + (r.report.totalCmsBaseline || 0), 0);
+  const totalSavings = successful.reduce((s, r) => s + (r.report.totalPotentialSavings || 0), 0);
+  const totalFindings = successful.reduce((s, r) => s + (r.report.findings?.length || 0), 0);
+
+  const summaryHtml = `
+    <div class="summary-row" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-label">Bills Processed</div>
+        <div class="stat-value">${successful.length}/${reports.length}</div>
+        ${failed.length > 0 ? `<div class="stat-sub" style="color:var(--red)">${failed.length} failed</div>` : ''}
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Billed (All)</div>
+        <div class="stat-value">${fmt$(totalBilled)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total CMS Baseline</div>
+        <div class="stat-value">${fmt$(totalCms)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Potential Savings</div>
+        <div class="stat-value" style="color:var(--red)">${fmt$(totalSavings)}</div>
+        <div class="stat-sub">${totalFindings} findings across all bills</div>
+      </div>
+    </div>
+  `;
+
+  const itemsHtml = reports.map((r, idx) => {
+    if (!r.report) {
+      return `
+        <div class="bulk-result-item">
+          <div class="bulk-result-header">
+            <div class="bulk-result-left">
+              <span class="badge badge-high">FAILED</span>
+              <span class="bulk-result-name">${escHtml(r.fileName)}</span>
+            </div>
+            <span style="font-size:13px;color:var(--red)">${escHtml(r.error)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const rpt = r.report;
+    const savings = rpt.totalPotentialSavings || 0;
+    return `
+      <div class="bulk-result-item">
+        <div class="bulk-result-header" onclick="toggleBulkItem(${idx})">
+          <div class="bulk-result-left">
+            <span class="badge badge-ok">OK</span>
+            <span class="bulk-result-name">${escHtml(r.fileName)}</span>
+            <div class="bulk-result-stats">
+              <span class="bulk-result-stat">Billed: <strong>${fmt$(rpt.totalBilled)}</strong></span>
+              <span class="bulk-result-stat">Savings: <strong style="color:var(--red)">${fmt$(savings)}</strong></span>
+              <span class="bulk-result-stat"><strong>${rpt.findings?.length || 0}</strong> items</span>
+            </div>
+          </div>
+          <svg class="bulk-result-chevron" id="bulkChevron${idx}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg>
+        </div>
+        <div class="bulk-result-body" id="bulkBody${idx}">
+          <div style="padding-top:12px">
+            <div class="summary-row" style="margin-bottom:12px">
+              <div class="stat-card" style="padding:12px">
+                <div class="stat-label" style="font-size:10px">Billed</div>
+                <div class="stat-value" style="font-size:18px">${fmt$(rpt.totalBilled)}</div>
+              </div>
+              <div class="stat-card" style="padding:12px">
+                <div class="stat-label" style="font-size:10px">CMS Rate</div>
+                <div class="stat-value" style="font-size:18px">${fmt$(rpt.totalCmsBaseline)}</div>
+              </div>
+              <div class="stat-card" style="padding:12px">
+                <div class="stat-label" style="font-size:10px">Savings</div>
+                <div class="stat-value" style="font-size:18px;color:var(--red)">${fmt$(savings)}</div>
+              </div>
+              <div class="stat-card" style="padding:12px">
+                <div class="stat-label" style="font-size:10px">Multiplier</div>
+                <div class="stat-value" style="font-size:18px">${fmtMult(rpt.summary?.averageMultiplier)}</div>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>CPT</th><th>Description</th><th>Billed</th><th>CMS Rate</th><th>Delta</th><th>Severity</th></tr></thead>
+                <tbody>
+                  ${(rpt.findings || []).map(f => {
+                    const d = f.overchargeAmount;
+                    const dc = d > 0 ? 'td-overcharge' : d < 0 ? 'td-ok' : 'td-neutral';
+                    return `<tr>
+                      <td class="td-code">${escHtml(f.cptCode)}</td>
+                      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(f.description)}">${escHtml(f.description)}</td>
+                      <td class="td-amount">${fmt$(f.billedAmount)}</td>
+                      <td class="td-amount td-neutral">${fmt$(f.cmsRateUsed)}</td>
+                      <td class="td-amount ${dc}">${d != null ? (d > 0 ? '+' : '') + fmt$(d) : '—'}</td>
+                      <td><span class="badge ${severityClass(f.severity)}">${f.severity || 'n/a'}</span></td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = `
+    <h2 style="margin-bottom:16px">Bulk Audit Results</h2>
+    ${summaryHtml}
+    <div class="bulk-results">
+      ${itemsHtml}
+    </div>
+  `;
 }
 
 function escHtml(s) {
@@ -2860,6 +3554,8 @@ function renderResults(report) {
   renderBillingErrors(report);
   renderSiteOfService(report);
   renderBalanceBilling(report);
+  renderHospitalPrices(report);
+  autoCheckCharityCare(report);
   renderActionButtons(report);
 
   // ── 3-Way Insurance Comparison ──────────────────────────────────────────────
@@ -3198,8 +3894,14 @@ function renderActionButtons(report) {
       <button class="btn btn-appeal" id="downloadAppealBtn">
         📄 Download Appeal Letter
       </button>
+      <button class="btn btn-dispute" id="downloadDisputeBtn">
+        📝 Download Dispute Letter
+      </button>
       <button class="btn btn-phone" id="downloadPhoneScriptBtn">
         📞 Download Phone Script
+      </button>
+      <button class="btn btn-pdf" id="downloadPdfBtn">
+        📄 Download PDF Report
       </button>
     </div>
   `;
@@ -3324,6 +4026,318 @@ Generated by BillScan — billscan.app
     a.click();
     URL.revokeObjectURL(url);
   });
+
+  // ── Dispute Letter ──────────────────────────────────────────────────────────
+  document.getElementById('downloadDisputeBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('downloadDisputeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/dispute-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report })
+      });
+      if (!res.ok) throw new Error('Dispute letter generation failed');
+      const data = await res.json();
+      const text = data.letter || JSON.stringify(data, null, 2);
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'billscan-dispute-letter.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Error generating dispute letter: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📝 Download Dispute Letter';
+    }
+  });
+
+  // ── PDF Export ──────────────────────────────────────────────────────────────
+  document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+    generatePdfReport(report);
+  });
+}
+
+// ── PDF Report Generation ──────────────────────────────────────────────────────
+function generatePdfReport(report) {
+  const findings = report.findings || [];
+  const stamp = report.stamp || {};
+  const ss = report.savingsSummary;
+  const be = report.billingErrors || [];
+  const sos = report.siteOfService || [];
+
+  const findingsRows = findings.map((f, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-family:monospace;font-weight:600;color:#2563eb">${esc(f.cptCode)}</td>
+      <td>${esc(f.description)}</td>
+      <td style="text-align:right">$${f.billedAmount.toFixed(2)}</td>
+      <td style="text-align:right">${f.cmsRateUsed != null ? '$' + f.cmsRateUsed.toFixed(2) : '—'}</td>
+      <td style="text-align:right;color:${f.overchargeAmount > 0 ? '#dc2626' : '#16a34a'}">${f.overchargeAmount != null ? (f.overchargeAmount > 0 ? '+' : '') + '$' + Math.abs(f.overchargeAmount).toFixed(2) : '—'}</td>
+      <td style="text-align:center">${f.severity || 'n/a'}</td>
+    </tr>
+  `).join('');
+
+  const billingErrorsHtml = be.length > 0 ? `
+    <h2>Billing Errors</h2>
+    ${be.map(e => `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:8px">
+      <strong>${esc(e.type || '')}</strong> — CPT ${esc(e.cptCode || '')}
+      <div style="color:#666;font-size:13px;margin-top:4px">${esc(e.description || '')}</div>
+      ${e.savingsAmount ? `<div style="color:#16a34a;font-weight:600;margin-top:4px">Potential savings: $${e.savingsAmount.toFixed(2)}</div>` : ''}
+    </div>`).join('')}
+  ` : '';
+
+  const sosHtml = sos.length > 0 ? `
+    <h2>Site-of-Service Savings</h2>
+    ${sos.map(s => `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:8px">
+      <strong>CPT ${esc(s.cptCode)}</strong> — ${esc(s.description || '')}
+      <div style="color:#666;font-size:13px;margin-top:4px">
+        Facility: $${(s.facilityRate || 0).toFixed(2)} | Office: $${(s.officeRate || 0).toFixed(2)}
+        ${s.savings ? ` | Save $${s.savings.toFixed(2)} in office setting` : ''}
+      </div>
+    </div>`).join('')}
+  ` : '';
+
+  const savingsHtml = ss ? `
+    <h2>Savings Summary</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">Total Billed</td><td style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb;font-weight:600">$${report.totalBilled.toFixed(2)}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">CMS Medicare Baseline</td><td style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb;font-weight:600">$${report.totalCmsBaseline.toFixed(2)}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;color:#dc2626">Potential Overcharge</td><td style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb;font-weight:600;color:#dc2626">$${report.totalPotentialSavings.toFixed(2)}</td></tr>
+      ${ss.insuredStrategy ? `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">Insured Strategy Total</td><td style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb;font-weight:600;color:#16a34a">$${ss.insuredStrategy.totalSavings.toFixed(2)}</td></tr>` : ''}
+      ${ss.uninsuredStrategy ? `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">Uninsured Strategy Total</td><td style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb;font-weight:600;color:#16a34a">$${ss.uninsuredStrategy.totalSavings.toFixed(2)}</td></tr>` : ''}
+    </table>
+  ` : '';
+
+  function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>BillScan Audit Report</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 40px 24px; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  h2 { font-size: 18px; margin: 32px 0 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; }
+  .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .summary-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; text-align: center; }
+  .summary-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #666; }
+  .summary-box .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+  th { background: #f8f9fa; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e5e7eb; color: #666; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+  .disclaimer { margin-top: 32px; padding: 16px; background: #f8f9fa; border-radius: 8px; font-size: 12px; color: #666; }
+  .logo { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+  .logo-box { width: 28px; height: 28px; background: #3fb950; border-radius: 7px; }
+  @media print { body { padding: 0; } }
+</style>
+</head><body>
+<div class="logo"><div class="logo-box"></div><strong style="font-size:17px">BillScan</strong></div>
+<h1>Medical Bill Audit Report</h1>
+<div class="subtitle">
+  Report ID: ${esc(stamp.reportId)} | Generated: ${new Date(stamp.generatedAt).toLocaleString()} | CMS Year: ${stamp.cmsEffectiveYear}
+  ${report.facilityName ? ' | Facility: ' + esc(report.facilityName) : ''}
+</div>
+
+<div class="summary-grid">
+  <div class="summary-box"><div class="label">Total Billed</div><div class="value">$${report.totalBilled.toFixed(2)}</div></div>
+  <div class="summary-box"><div class="label">CMS Baseline</div><div class="value">$${report.totalCmsBaseline.toFixed(2)}</div></div>
+  <div class="summary-box"><div class="label">Potential Savings</div><div class="value" style="color:#dc2626">$${report.totalPotentialSavings.toFixed(2)}</div></div>
+  <div class="summary-box"><div class="label">Avg Multiplier</div><div class="value">${report.summary?.averageMultiplier ? report.summary.averageMultiplier.toFixed(1) + 'x' : '—'}</div></div>
+</div>
+
+<h2>Line Item Findings</h2>
+<table>
+  <thead><tr><th>#</th><th>CPT</th><th>Description</th><th style="text-align:right">Billed</th><th style="text-align:right">CMS Rate</th><th style="text-align:right">Delta</th><th style="text-align:center">Severity</th></tr></thead>
+  <tbody>${findingsRows}</tbody>
+</table>
+
+${billingErrorsHtml}
+${sosHtml}
+${savingsHtml}
+
+<div class="disclaimer">
+  <strong>Legal Disclaimer:</strong> This report is generated by BillScan for informational purposes only. It is not legal, financial, or medical advice.
+  All CMS rates are sourced from official Medicare fee schedules published by the Centers for Medicare &amp; Medicaid Services (cms.gov).
+  Data sources: ${(stamp.dataSources || ['PFS']).join(', ')} | CMS Effective Year: ${stamp.cmsEffectiveYear}
+  <br><br>
+  <strong>CMS Data Citations:</strong>
+  <br>• Physician Fee Schedule (PFS): https://www.cms.gov/medicare/physician-fee-schedule
+  <br>• Clinical Lab Fee Schedule (CLFS): https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule
+  <br>• Average Sales Price (ASP): https://www.cms.gov/medicare/payment/all-fee-service-providers/part-b-drugs
+  <br>• Outpatient PPS (OPPS): https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient
+</div>
+
+<div style="text-align:center;margin-top:24px;font-size:12px;color:#999">
+  Generated by BillScan v${esc(stamp.toolVersion)} — billscan.app
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
+  }
+}
+
+// ── Hospital Prices Rendering ──────────────────────────────────────────────────
+function renderHospitalPrices(report) {
+  const findings = report.findings || [];
+  const withPrices = findings.filter(f => f.hospitalPrices);
+  const el = document.getElementById('hospitalPricesSection');
+
+  if (withPrices.length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+
+  el.style.display = 'block';
+
+  const cardsHtml = withPrices.map(f => {
+    const hp = f.hospitalPrices;
+    const billed = f.billedAmount;
+    const cms = f.cmsRateUsed;
+    const cash = hp.cashPrice;
+    const gross = hp.grossCharge;
+    const rates = hp.negotiatedRates || [];
+
+    // Find the max value for bar chart scaling
+    const allVals = [billed, cms, cash, gross, ...rates.map(r => r.rate)].filter(v => v != null);
+    const maxVal = Math.max(...allVals, 1);
+
+    let barsHtml = '';
+
+    // Provider billed
+    barsHtml += hpBar('Provider charged', billed, maxVal, '#f85149');
+
+    // Hospital gross charge (list price)
+    if (gross != null) {
+      barsHtml += hpBar('Hospital list price', gross, maxVal, '#8b949e');
+    }
+
+    // Negotiated rates
+    for (const r of rates.slice(0, 3)) {
+      barsHtml += hpBar(r.payer + ' negotiated', r.rate, maxVal, '#e3b341');
+    }
+
+    // Cash price
+    if (cash != null) {
+      barsHtml += hpBar('Hospital cash price', cash, maxVal, '#3fb950');
+    }
+
+    // CMS rate
+    if (cms != null) {
+      barsHtml += hpBar('CMS Medicare rate', cms, maxVal, '#58a6ff');
+    }
+
+    // Savings note
+    let savingsNote = '';
+    if (cash != null && cash < billed) {
+      savingsNote = `<div class="hp-savings-note">Pay cash and save ${fmt$(billed - cash)}</div>`;
+    }
+
+    return `
+      <div class="hp-card">
+        <div class="hp-card-header">
+          <div>
+            <span class="hp-card-code">CPT ${escHtml(f.cptCode)}</span>
+            <div class="hp-card-title">${escHtml(f.description)}</div>
+          </div>
+        </div>
+        ${barsHtml}
+        ${savingsNote}
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="new-section">
+      <div class="new-section-header">
+        <span class="section-icon">🏥</span>
+        <h2>Hospital Published Prices — Price Transparency Data</h2>
+      </div>
+      ${cardsHtml}
+    </div>
+  `;
+}
+
+function hpBar(label, value, max, color) {
+  const pct = Math.max(((value / max) * 100), 2).toFixed(1);
+  return `
+    <div class="hp-bar-row">
+      <span class="hp-bar-label">${escHtml(label)}</span>
+      <div class="hp-bar-track">
+        <div class="hp-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="hp-bar-val">${fmt$(value)}</span>
+    </div>
+  `;
+}
+
+// ── Auto Charity Care Check ────────────────────────────────────────────────────
+async function autoCheckCharityCare(report) {
+  const el = document.getElementById('autoCharitySection');
+  if (!report.facilityName) {
+    el.style.display = 'none';
+    return;
+  }
+
+  // Don't re-check if charityCheck section already rendered from query param
+  if (report.charityCheck) {
+    el.style.display = 'none';
+    return;
+  }
+
+  el.style.display = 'block';
+  el.innerHTML = `<div class="card"><div style="display:flex;align-items:center;gap:10px;color:var(--text-muted)"><div class="spinner" style="width:18px;height:18px"></div><span style="font-size:13px">Checking charity care eligibility...</span></div></div>`;
+
+  try {
+    const zip = document.getElementById('zipInput').value.trim();
+    const res = await fetch('/api/charity-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        facilityName: report.facilityName,
+        zip: zip || undefined,
+      })
+    });
+    if (!res.ok) throw new Error('Failed');
+    const c = await res.json();
+
+    el.innerHTML = `
+      <div class="new-section">
+        <div class="new-section-header">
+          <span class="section-icon">🏥</span>
+          <h2>Charity Care Eligibility</h2>
+        </div>
+        <div class="charity-card ${c.isNonprofit ? 'nonprofit' : ''}">
+          <h3 style="margin-bottom:10px">${c.isNonprofit ? '🏥 Nonprofit Hospital Found' : 'Charity Care Status'}</h3>
+          ${c.isNonprofit ? `
+            <p style="font-size:14px;margin-bottom:10px">
+              <strong>${escHtml(c.hospitalName || report.facilityName)}</strong> is a registered 501(c)(3) nonprofit hospital.
+              ${c.ein ? `<span style="color:var(--text-muted);font-size:12px"> EIN: ${escHtml(c.ein)}</span>` : ''}
+            </p>
+          ` : ''}
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:6px">
+            ${(c.advice || []).map(a => `<li style="font-size:13px;color:var(--text-muted);line-height:1.5">• ${escHtml(a)}</li>`).join('')}
+          </ul>
+          <div class="alert alert-info" style="margin-top:12px">
+            <span class="alert-icon">ℹ</span>
+            <span>Under IRS Section 501(r), nonprofit hospitals must offer financial assistance. Ask for their Financial Assistance Policy.</span>
+          </div>
+          ${c.fapUrl ? `<a href="${escHtml(c.fapUrl)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="margin-top:12px">View Financial Assistance Policy</a>` : ''}
+        </div>
+      </div>
+    `;
+  } catch {
+    el.style.display = 'none';
+  }
 }
 
 // ── Copy HIPAA letter ──────────────────────────────────────────────────────────
@@ -3337,6 +4351,17 @@ function copyHipaaLetter() {
   });
 }
 
+// ── Bulk item toggle ────────────────────────────────────────────────────────
+function toggleBulkItem(idx) {
+  const body = document.getElementById('bulkBody' + idx);
+  const chevron = document.getElementById('bulkChevron' + idx);
+  if (body.classList.toggle('open')) {
+    chevron.classList.add('open');
+  } else {
+    chevron.classList.remove('open');
+  }
+}
+
 // Export JSON
 document.getElementById('exportJsonBtn').addEventListener('click', () => {
   if (!lastReport) return;
@@ -3347,6 +4372,292 @@ document.getElementById('exportJsonBtn').addEventListener('click', () => {
   a.download = 'billscan-report-' + (lastReport.stamp?.reportId?.slice(0,8) || 'report') + '.json';
   a.click();
   URL.revokeObjectURL(url);
+});
+
+// ── History page ──────────────────────────────────────────────────────────────
+
+let historyOffset = 0;
+const historyLimit = 20;
+
+async function loadHistory() {
+  const content = document.getElementById('historyContent');
+  const totalsEl = document.getElementById('historyTotals');
+  const pagination = document.getElementById('historyPagination');
+  const detail = document.getElementById('historyDetail');
+
+  // Hide detail, show list
+  detail.style.display = 'none';
+  content.style.display = 'block';
+  content.innerHTML = '<div class="loading-box"><div class="spinner"></div><div class="loading-msg">Loading history…</div></div>';
+
+  try {
+    const res = await fetch('/api/audits?limit=' + historyLimit + '&offset=' + historyOffset);
+    if (!res.ok) throw new Error('Failed to load audits');
+    const data = await res.json();
+
+    // Running totals
+    if (data.runningTotals) {
+      totalsEl.style.display = 'grid';
+      document.getElementById('htAuditCount').textContent = data.runningTotals.auditCount.toLocaleString();
+      document.getElementById('htTotalBilled').textContent = '$' + data.runningTotals.totalBilled.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('htTotalCms').textContent = '$' + data.runningTotals.totalCms.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('htTotalSavings').textContent = '$' + data.runningTotals.totalSavings.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    if (!data.audits || data.audits.length === 0) {
+      content.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:var(--text-muted)">No audits yet. <a href="#/audit">Run your first audit</a> to see results here.</div>';
+      pagination.style.display = 'none';
+      return;
+    }
+
+    let html = '<table class="history-table"><thead><tr>';
+    html += '<th>Date</th><th>Report ID</th><th>Billed</th><th>CMS Baseline</th><th>Savings</th><th>Items</th><th></th>';
+    html += '</tr></thead><tbody>';
+
+    for (const a of data.audits) {
+      const date = a.created_at ? new Date(a.created_at).toLocaleDateString() : '—';
+      const rid = a.report_id?.slice(0, 8) || '—';
+      const billed = a.total_billed != null ? '$' + Number(a.total_billed).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+      const cms = a.total_cms != null ? '$' + Number(a.total_cms).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+      const savings = a.total_savings != null ? '$' + Number(a.total_savings).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+      const sevClass = a.total_savings > 500 ? 'sev-high' : (a.total_savings > 100 ? 'sev-med' : 'sev-low');
+
+      html += '<tr onclick="viewAuditDetail(\'' + (a.report_id || a.id) + '\')">';
+      html += '<td>' + date + '</td>';
+      html += '<td style="font-family:monospace;font-size:12px">' + rid + '</td>';
+      html += '<td>' + billed + '</td>';
+      html += '<td>' + cms + '</td>';
+      html += '<td class="' + sevClass + '">' + savings + '</td>';
+      html += '<td>' + (a.finding_count || 0) + '</td>';
+      html += '<td><button class="history-delete-btn" onclick="event.stopPropagation();deleteAudit(\'' + (a.report_id || a.id) + '\')">Delete</button></td>';
+      html += '</tr>';
+    }
+
+    html += '</tbody></table>';
+    content.innerHTML = html;
+
+    // Pagination
+    const totalPages = Math.ceil(data.total / historyLimit);
+    const currentPage = Math.floor(historyOffset / historyLimit) + 1;
+    pagination.style.display = totalPages > 1 ? 'block' : 'none';
+    document.getElementById('historyPageInfo').textContent = 'Page ' + currentPage + ' of ' + totalPages;
+    document.getElementById('historyPrevBtn').disabled = historyOffset === 0;
+    document.getElementById('historyNextBtn').disabled = historyOffset + historyLimit >= data.total;
+
+  } catch (err) {
+    content.innerHTML = '<div class="card" style="color:var(--danger)">Error loading history: ' + err.message + '</div>';
+  }
+}
+
+document.getElementById('historyPrevBtn')?.addEventListener('click', () => {
+  historyOffset = Math.max(0, historyOffset - historyLimit);
+  loadHistory();
+});
+document.getElementById('historyNextBtn')?.addEventListener('click', () => {
+  historyOffset += historyLimit;
+  loadHistory();
+});
+
+async function viewAuditDetail(auditId) {
+  const content = document.getElementById('historyContent');
+  const pagination = document.getElementById('historyPagination');
+  const detail = document.getElementById('historyDetail');
+  const detailContent = document.getElementById('historyDetailContent');
+
+  content.style.display = 'none';
+  pagination.style.display = 'none';
+  detail.style.display = 'block';
+  detailContent.innerHTML = '<div class="loading-box"><div class="spinner"></div><div class="loading-msg">Loading audit…</div></div>';
+
+  try {
+    const res = await fetch('/api/audits/' + auditId);
+    if (!res.ok) throw new Error('Failed to load audit');
+    const data = await res.json();
+
+    if (data.report) {
+      // Render the full report inline
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = '<div class="summary-cards" style="margin-bottom:20px">' +
+        '<div class="summary-card"><div class="summary-label">Billed</div><div class="summary-value">$' + Number(data.totalBilled).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>' +
+        '<div class="summary-card"><div class="summary-label">CMS Baseline</div><div class="summary-value">$' + Number(data.totalCms).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>' +
+        '<div class="summary-card"><div class="summary-label">Savings</div><div class="summary-value savings">$' + Number(data.totalSavings).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>' +
+        '<div class="summary-card"><div class="summary-label">Items</div><div class="summary-value">' + data.findingCount + '</div></div>' +
+        '</div>';
+
+      // Findings table
+      const report = data.report;
+      if (report.findings && report.findings.length > 0) {
+        let tbl = '<h3 style="margin:20px 0 12px">Findings</h3><div style="overflow-x:auto"><table class="history-table"><thead><tr>';
+        tbl += '<th>CPT</th><th>Description</th><th>Billed</th><th>CMS Rate</th><th>Delta</th><th>Severity</th>';
+        tbl += '</tr></thead><tbody>';
+        for (const f of report.findings) {
+          const delta = f.overchargeAmount != null ? '$' + Number(f.overchargeAmount).toFixed(2) : '—';
+          const sevClass = f.severity === 'high' ? 'sev-high' : (f.severity === 'medium' ? 'sev-med' : 'sev-low');
+          tbl += '<tr>';
+          tbl += '<td style="font-family:monospace">' + (f.cptCode || '—') + '</td>';
+          tbl += '<td>' + (f.description || '—') + '</td>';
+          tbl += '<td>$' + Number(f.billedAmount).toFixed(2) + '</td>';
+          tbl += '<td>' + (f.cmsRateUsed != null ? '$' + Number(f.cmsRateUsed).toFixed(2) : '—') + '</td>';
+          tbl += '<td class="' + sevClass + '">' + delta + '</td>';
+          tbl += '<td class="' + sevClass + '">' + (f.severity || '—') + '</td>';
+          tbl += '</tr>';
+        }
+        tbl += '</tbody></table></div>';
+        wrapper.innerHTML += tbl;
+      }
+
+      wrapper.innerHTML += '<p style="font-size:12px;color:var(--text-faint);margin-top:16px">Report ID: ' + data.reportId + ' | Created: ' + new Date(data.createdAt).toLocaleString() + '</p>';
+      detailContent.innerHTML = '';
+      detailContent.appendChild(wrapper);
+    } else {
+      detailContent.innerHTML = '<div class="card" style="color:var(--text-muted)">Report data not available.</div>';
+    }
+  } catch (err) {
+    detailContent.innerHTML = '<div class="card" style="color:var(--danger)">Error: ' + err.message + '</div>';
+  }
+}
+
+document.getElementById('historyBackBtn')?.addEventListener('click', () => {
+  document.getElementById('historyDetail').style.display = 'none';
+  document.getElementById('historyContent').style.display = 'block';
+  loadHistory();
+});
+
+async function deleteAudit(auditId) {
+  if (!confirm('Delete this audit? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/audits/' + auditId, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    loadHistory();
+  } catch (err) {
+    alert('Error deleting audit: ' + err.message);
+  }
+}
+
+// Make viewAuditDetail and deleteAudit available globally
+window.viewAuditDetail = viewAuditDetail;
+window.deleteAudit = deleteAudit;
+
+// ── Community page ───────────────────────────────────────────────────────────
+
+document.getElementById('communityForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const resultEl = document.getElementById('cpResult');
+
+  const payload = {
+    billingCode: document.getElementById('cpBillingCode').value.trim(),
+    amountPaid: parseFloat(document.getElementById('cpAmountPaid').value),
+    description: document.getElementById('cpDescription').value.trim() || undefined,
+    payerName: document.getElementById('cpPayerName').value.trim() || undefined,
+    planType: document.getElementById('cpPlanType').value || undefined,
+    facilityName: document.getElementById('cpFacilityName').value.trim() || undefined,
+    facilityZip: document.getElementById('cpFacilityZip').value.trim() || undefined,
+    dateOfService: document.getElementById('cpDateOfService').value || undefined,
+    isInsured: document.getElementById('cpIsInsured').checked,
+  };
+
+  try {
+    const res = await fetch('/api/community-price', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Submission failed');
+    }
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="color:var(--accent);font-weight:600;padding:10px;background:rgba(63,185,80,0.1);border-radius:6px">Thank you! Your price data has been submitted.</div>';
+    document.getElementById('communityForm').reset();
+    document.getElementById('cpIsInsured').checked = true;
+  } catch (err) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="color:var(--danger);padding:10px;background:rgba(248,81,73,0.1);border-radius:6px">Error: ' + err.message + '</div>';
+  }
+});
+
+document.getElementById('cpSearchBtn')?.addEventListener('click', async () => {
+  const code = document.getElementById('cpSearchCode').value.trim();
+  if (!code) return;
+  const resultsEl = document.getElementById('cpSearchResults');
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = '<div class="loading-box"><div class="spinner"></div></div>';
+
+  try {
+    const res = await fetch('/api/community-prices?code=' + encodeURIComponent(code));
+    if (!res.ok) throw new Error('Search failed');
+    const data = await res.json();
+
+    if (data.count === 0) {
+      resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:16px;text-align:center">No community prices found for <strong>' + code + '</strong>. Be the first to contribute!</div>';
+      return;
+    }
+
+    let html = '<h4 style="margin-bottom:12px">' + data.count + ' price(s) for ' + code + '</h4>';
+    html += '<div class="cp-stats-grid">';
+    html += '<div class="cp-stat"><div class="cp-stat-label">Average</div><div class="cp-stat-value">$' + data.stats.avg.toFixed(2) + '</div></div>';
+    html += '<div class="cp-stat"><div class="cp-stat-label">Median</div><div class="cp-stat-value">$' + data.stats.median.toFixed(2) + '</div></div>';
+    html += '<div class="cp-stat"><div class="cp-stat-label">Min</div><div class="cp-stat-value">$' + data.stats.min.toFixed(2) + '</div></div>';
+    html += '<div class="cp-stat"><div class="cp-stat-label">Max</div><div class="cp-stat-value">$' + data.stats.max.toFixed(2) + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="cp-price-list">';
+    for (const p of data.prices) {
+      html += '<div class="cp-price-item">';
+      html += '<div><strong>$' + Number(p.amount_paid).toFixed(2) + '</strong>';
+      if (p.payer_name) html += ' — ' + p.payer_name;
+      if (p.plan_type) html += ' (' + p.plan_type.toUpperCase() + ')';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:var(--text-muted)">';
+      if (p.facility_name) html += p.facility_name;
+      if (p.facility_zip) html += ' ' + p.facility_zip;
+      html += '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    resultsEl.innerHTML = html;
+  } catch (err) {
+    resultsEl.innerHTML = '<div style="color:var(--danger)">Error: ' + err.message + '</div>';
+  }
+});
+
+document.getElementById('mrfSearchBtn')?.addEventListener('click', async () => {
+  const hospital = document.getElementById('mrfSearchHospital').value.trim();
+  if (!hospital) return;
+  const state = document.getElementById('mrfSearchState').value.trim();
+  const resultsEl = document.getElementById('mrfSearchResults');
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = '<div class="loading-box"><div class="spinner"></div></div>';
+
+  try {
+    let url = '/api/hospital-mrf?hospital=' + encodeURIComponent(hospital);
+    if (state) url += '&state=' + encodeURIComponent(state);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Search failed');
+    const data = await res.json();
+
+    if (data.matches.length === 0) {
+      resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:16px;text-align:center">No matching hospitals found for "<strong>' + hospital + '</strong>".</div>';
+      return;
+    }
+
+    let html = '<h4 style="margin-bottom:12px">' + data.matches.length + ' match(es)</h4>';
+    for (const m of data.matches) {
+      const scoreClass = m.score >= 0.7 ? 'high' : (m.score >= 0.4 ? 'med' : 'low');
+      html += '<div class="mrf-match">';
+      html += '<div>';
+      html += '<strong>' + m.hospitalName + '</strong>';
+      html += '<div style="font-size:12px;color:var(--text-muted)">Type: ' + m.type + ' | States: ' + m.states.join(', ') + '</div>';
+      html += '<a href="' + m.mrfUrl + '" target="_blank" rel="noopener" style="font-size:13px">' + m.mrfUrl + '</a>';
+      html += '</div>';
+      html += '<span class="mrf-match-score ' + scoreClass + '">' + (m.score * 100).toFixed(0) + '%</span>';
+      html += '</div>';
+    }
+    resultsEl.innerHTML = html;
+  } catch (err) {
+    resultsEl.innerHTML = '<div style="color:var(--danger)">Error: ' + err.message + '</div>';
+  }
 });
 
 // Initial data load on home page

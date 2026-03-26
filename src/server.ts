@@ -19,10 +19,14 @@ import { detectBalanceBilling } from './analyzer/balance-billing.js';
 import { buildSavingsSummary } from './analyzer/savings-summary.js';
 import { getAggregateStats } from './output/stats.js';
 import { generateAppealEvidence } from './dispute/appeal-generator.js';
+import { generateDisputeLetter } from './dispute/letter-generator.js';
 import { lookupHospitalPrices, getCashPrice, getNegotiatedRate, getPriceSummary } from './matcher/hospital-price-lookup.js';
 import { getDb } from './db/connection.js';
 import { runMigrations } from './db/migrations.js';
 import type { ExtractedEobData } from './parser/eob-ocr-extractor.js';
+import { findHospitalMRF, listHospitalMRFs } from './collector/hospital-mrf-finder.js';
+import { parseHospitalPriceFile } from './collector/hospital-price-parser.js';
+import { importHospitalPrices } from './collector/hospital-price-importer.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const WEB_DIR = path.resolve(process.cwd(), 'web');
@@ -357,7 +361,7 @@ async function handleAuditFile(
       setting: (params.setting as 'facility' | 'office') || undefined,
       zip: params.zip || undefined,
       locality: params.locality || undefined,
-      save: params.save === 'true',
+      save: true, // Always save audits for history
     };
 
     const { report, isEob, eob, eobRaw } = await runAudit(tmpPath, auditOptions);
@@ -612,7 +616,7 @@ async function handleAuditJson(
       setting: (params.setting as 'facility' | 'office') || undefined,
       zip: params.zip || undefined,
       locality: params.locality || undefined,
-      save: params.save === 'true',
+      save: true, // Always save audits for history
     };
 
     const { report } = await runAudit(tmpPath, auditOptions);
@@ -873,6 +877,361 @@ async function handleAppeal(
   }
 }
 
+// ─── Dispute Letter endpoint ──────────────────────────────────────────────────
+
+async function handleDisputeLetter(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  let tmpPath: string | null = null;
+  try {
+    let body: Buffer;
+    try {
+      body = await readBody(req);
+    } catch (err) {
+      return sendError(res, 413, (err as Error).message);
+    }
+
+    let parsed: { report?: any };
+    try {
+      parsed = JSON.parse(body.toString('utf-8'));
+    } catch {
+      return sendError(res, 400, 'Invalid JSON body');
+    }
+
+    if (!parsed.report) {
+      return sendError(res, 400, 'report object is required');
+    }
+
+    const letter = generateDisputeLetter(parsed.report);
+    sendJson(res, 200, { letter });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  } finally {
+    if (tmpPath) cleanupTemp(tmpPath);
+  }
+}
+
+// ─── Hospital MRF finder ─────────────────────────────────────────────────────
+
+async function handleHospitalMrf(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
+  const params = parseQueryParams(url);
+  const hospital = params.hospital;
+  if (!hospital) {
+    return sendError(res, 400, 'hospital query param is required');
+  }
+
+  const matches = findHospitalMRF(hospital, {
+    state: params.state || undefined,
+    threshold: params.threshold ? Number(params.threshold) : undefined,
+    limit: params.limit ? Number(params.limit) : undefined,
+  });
+
+  sendJson(res, 200, { hospital, matches, total: matches.length });
+}
+
+async function handleHospitalMrfList(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  const entries = listHospitalMRFs();
+  sendJson(res, 200, { hospitals: entries, total: entries.length });
+}
+
+async function handleHospitalMrfImport(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
+  const params = parseQueryParams(url);
+  const hospital = params.hospital;
+  if (!hospital) {
+    return sendError(res, 400, 'hospital query param is required');
+  }
+
+  try {
+    // Find the MRF URL for this hospital
+    const matches = findHospitalMRF(hospital, { limit: 1, threshold: 0.4 });
+    if (matches.length === 0) {
+      return sendError(res, 404, `No MRF URL found for hospital: ${hospital}`);
+    }
+
+    const match = matches[0];
+
+    // Read body for optional overrides
+    let body: Buffer;
+    try {
+      body = await readBody(req);
+    } catch (err) {
+      return sendError(res, 413, (err as Error).message);
+    }
+
+    let mrfUrl = match.mrfUrl;
+    if (body.length > 0) {
+      try {
+        const parsed = JSON.parse(body.toString('utf-8'));
+        if (parsed.mrfUrl) mrfUrl = parsed.mrfUrl;
+      } catch {
+        // Ignore parse errors — use the found URL
+      }
+    }
+
+    // Parse and import
+    const rows = await parseHospitalPriceFile(mrfUrl, mrfUrl);
+    const result = await importHospitalPrices(rows, mrfUrl);
+
+    sendJson(res, 200, {
+      hospital: match.hospitalName,
+      mrfUrl,
+      imported: result.inserted,
+      skipped: result.skipped,
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+// ─── Audit history ───────────────────────────────────────────────────────────
+
+async function handleListAudits(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
+  const params = parseQueryParams(url);
+  const limit = Math.min(Number(params.limit) || 50, 200);
+  const offset = Number(params.offset) || 0;
+
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: `SELECT id, report_id, total_billed, total_cms, total_savings,
+                   finding_count, created_at, user_id
+            FROM audits
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?`,
+      args: [limit, offset],
+    });
+
+    const countResult = await db.execute({
+      sql: `SELECT COUNT(*) as cnt FROM audits`,
+      args: [],
+    });
+
+    const total = (countResult.rows[0] as unknown as { cnt: number }).cnt;
+
+    // Compute running totals
+    const totalsResult = await db.execute({
+      sql: `SELECT COALESCE(SUM(total_billed), 0) as total_billed,
+                   COALESCE(SUM(total_cms), 0) as total_cms,
+                   COALESCE(SUM(total_savings), 0) as total_savings,
+                   COUNT(*) as audit_count
+            FROM audits`,
+      args: [],
+    });
+
+    const totals = totalsResult.rows[0] as unknown as {
+      total_billed: number;
+      total_cms: number;
+      total_savings: number;
+      audit_count: number;
+    };
+
+    sendJson(res, 200, {
+      audits: result.rows,
+      total,
+      limit,
+      offset,
+      runningTotals: {
+        totalBilled: totals.total_billed,
+        totalCms: totals.total_cms,
+        totalSavings: totals.total_savings,
+        auditCount: totals.audit_count,
+      },
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleGetAudit(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  auditId: string
+) {
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: `SELECT * FROM audits WHERE id = ? OR report_id = ?`,
+      args: [auditId, auditId],
+    });
+
+    if (result.rows.length === 0) {
+      return sendError(res, 404, 'Audit not found');
+    }
+
+    const row = result.rows[0] as unknown as {
+      id: number;
+      report_id: string;
+      report_json: string;
+      total_billed: number;
+      total_cms: number;
+      total_savings: number;
+      finding_count: number;
+      created_at: string;
+      user_id: string | null;
+    };
+
+    let report;
+    try {
+      report = JSON.parse(row.report_json);
+    } catch {
+      report = null;
+    }
+
+    sendJson(res, 200, {
+      id: row.id,
+      reportId: row.report_id,
+      totalBilled: row.total_billed,
+      totalCms: row.total_cms,
+      totalSavings: row.total_savings,
+      findingCount: row.finding_count,
+      createdAt: row.created_at,
+      userId: row.user_id,
+      report,
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleDeleteAudit(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  auditId: string
+) {
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: `DELETE FROM audits WHERE id = ? OR report_id = ?`,
+      args: [auditId, auditId],
+    });
+
+    if (result.rowsAffected === 0) {
+      return sendError(res, 404, 'Audit not found');
+    }
+
+    sendJson(res, 200, { deleted: true, id: auditId });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+// ─── Community prices ────────────────────────────────────────────────────────
+
+async function handleSubmitCommunityPrice(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  let body: Buffer;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendError(res, 413, (err as Error).message);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(body.toString('utf-8'));
+  } catch {
+    return sendError(res, 400, 'Invalid JSON body');
+  }
+
+  const { billingCode, description, amountPaid, payerName, planType, facilityName, facilityZip, dateOfService, isInsured } = parsed;
+
+  if (!billingCode || amountPaid === undefined) {
+    return sendError(res, 400, 'billingCode and amountPaid are required');
+  }
+
+  try {
+    const db = getDb();
+    await db.execute({
+      sql: `INSERT INTO community_prices
+            (billing_code, description, amount_paid, payer_name, plan_type, facility_name, facility_zip, date_of_service, is_insured)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        billingCode,
+        description || null,
+        Number(amountPaid),
+        payerName || null,
+        planType || null,
+        facilityName || null,
+        facilityZip || null,
+        dateOfService || null,
+        isInsured !== undefined ? (isInsured ? 1 : 0) : 1,
+      ],
+    });
+
+    sendJson(res, 201, { success: true, billingCode });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleGetCommunityPrices(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
+  const params = parseQueryParams(url);
+  const code = params.code;
+  if (!code) {
+    return sendError(res, 400, 'code query param is required');
+  }
+
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: `SELECT * FROM community_prices WHERE billing_code = ? ORDER BY submitted_at DESC LIMIT 100`,
+      args: [code],
+    });
+
+    // Compute stats
+    const prices = result.rows as unknown as Array<{
+      amount_paid: number;
+      payer_name: string | null;
+      plan_type: string | null;
+      is_insured: number;
+    }>;
+
+    const amounts = prices.map(p => p.amount_paid);
+    const avg = amounts.length > 0 ? amounts.reduce((a, b) => a + b, 0) / amounts.length : 0;
+    const min = amounts.length > 0 ? Math.min(...amounts) : 0;
+    const max = amounts.length > 0 ? Math.max(...amounts) : 0;
+    const median = amounts.length > 0
+      ? amounts.sort((a, b) => a - b)[Math.floor(amounts.length / 2)]
+      : 0;
+
+    sendJson(res, 200, {
+      code,
+      count: result.rows.length,
+      stats: {
+        avg: +avg.toFixed(2),
+        min: +min.toFixed(2),
+        max: +max.toFixed(2),
+        median: +median.toFixed(2),
+      },
+      prices: result.rows,
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
 // ─── Main request router ──────────────────────────────────────────────────────
 
 async function requestHandler(
@@ -887,7 +1246,7 @@ async function requestHandler(
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     });
     res.end();
@@ -917,8 +1276,40 @@ async function requestHandler(
     if (method === 'POST' && pathname === '/api/appeal') {
       return handleAppeal(req, res);
     }
+    if (method === 'POST' && pathname === '/api/dispute-letter') {
+      return handleDisputeLetter(req, res);
+    }
     if (method === 'GET' && pathname === '/api/hospital-prices') {
       return handleHospitalPrices(req, res, url);
+    }
+    // Hospital MRF finder
+    if (method === 'GET' && pathname === '/api/hospital-mrf') {
+      return handleHospitalMrf(req, res, url);
+    }
+    if (method === 'GET' && pathname === '/api/hospital-mrf/list') {
+      return handleHospitalMrfList(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/hospital-mrf/import') {
+      return handleHospitalMrfImport(req, res, url);
+    }
+    // Audit history
+    if (method === 'GET' && pathname === '/api/audits') {
+      return handleListAudits(req, res, url);
+    }
+    if (method === 'GET' && pathname.startsWith('/api/audits/')) {
+      const auditId = pathname.split('/api/audits/')[1];
+      return handleGetAudit(req, res, auditId);
+    }
+    if (method === 'DELETE' && pathname.startsWith('/api/audits/')) {
+      const auditId = pathname.split('/api/audits/')[1];
+      return handleDeleteAudit(req, res, auditId);
+    }
+    // Community prices
+    if (method === 'POST' && pathname === '/api/community-price') {
+      return handleSubmitCommunityPrice(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/community-prices') {
+      return handleGetCommunityPrices(req, res, url);
     }
     return sendError(res, 404, `API endpoint not found: ${method} ${pathname}`);
   }
