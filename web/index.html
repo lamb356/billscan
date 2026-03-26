@@ -987,6 +987,551 @@
     .insight-item.insight-warning { background: var(--yellow-bg); color: var(--yellow); }
     .insight-item.insight-alert   { background: var(--red-bg); color: var(--red); }
     .insight-icon { flex-shrink: 0; font-size: 14px; }
+
+    /* ─── Savings Summary Section ─────────────────────────────────── */
+    .savings-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 768px) {
+      .savings-summary-grid { grid-template-columns: 1fr; }
+    }
+    .savings-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+    .savings-col h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .savings-big-num {
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 8px;
+    }
+    .savings-detail {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .savings-detail strong { color: var(--text); }
+    .savings-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .savings-breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      padding: 6px 10px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+    }
+    .savings-breakdown-item .sbi-label { color: var(--text-muted); }
+    .savings-breakdown-item .sbi-val { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--green); }
+    .savings-strategies {
+      list-style: none;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .savings-strategies li {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding-left: 18px;
+      position: relative;
+    }
+    .savings-strategies li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+    .universal-tips {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .universal-tips h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .universal-tips ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .universal-tips li {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding-left: 20px;
+      position: relative;
+    }
+    .universal-tips li::before {
+      content: '💡';
+      position: absolute;
+      left: 0;
+      font-size: 12px;
+    }
+
+    /* ─── Billing Errors Section ──────────────────────────────────── */
+    .billing-errors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .billing-error-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      border-left: 4px solid var(--border);
+    }
+    .billing-error-card.severity-alert { border-left-color: #ef4444; }
+    .billing-error-card.severity-warning { border-left-color: #f59e0b; }
+    .billing-error-card.severity-info { border-left-color: #3b82f6; }
+    .billing-error-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .billing-error-icon { font-size: 18px; flex-shrink: 0; }
+    .billing-error-type {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .billing-error-type.type-alert { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .billing-error-type.type-warning { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .billing-error-type.type-info { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .billing-error-codes {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--blue);
+      font-weight: 600;
+    }
+    .billing-error-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .billing-error-savings {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    .billing-error-action {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .billing-error-action strong { color: var(--accent); }
+
+    /* ─── Site of Service Section ─────────────────────────────────── */
+    .sos-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sos-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .sos-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .sos-code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue);
+    }
+    .sos-desc {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .sos-shoppable {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--green-bg);
+      color: var(--green);
+    }
+    .sos-rates {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .sos-rate-box {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 12px;
+      text-align: center;
+    }
+    .sos-rate-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .sos-rate-val {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .sos-savings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--green-bg);
+      border: 1px solid rgba(63,185,80,0.2);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+    }
+    .sos-savings-amount {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .sos-savings-pct {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--green);
+    }
+    .sos-recommendation {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      font-style: italic;
+    }
+
+    /* ─── Balance Billing Section ─────────────────────────────────── */
+    .bb-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .bb-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      border-left: 4px solid #ef4444;
+    }
+    .bb-card.bb-warning { border-left-color: #f59e0b; }
+    .bb-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .bb-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: rgba(239,68,68,0.15);
+      color: #ef4444;
+    }
+    .bb-amounts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .bb-amount-box {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 10px;
+      text-align: center;
+    }
+    .bb-amount-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .bb-amount-val {
+      font-size: 16px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .bb-legal {
+      background: var(--blue-bg);
+      border: 1px solid rgba(88,166,255,0.2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--blue);
+      line-height: 1.5;
+      margin: 10px 0;
+    }
+    .bb-action {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .bb-action strong { color: var(--accent); }
+
+    /* ─── Appeal / Download Buttons ───────────────────────────────── */
+    .action-buttons-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      margin-bottom: 16px;
+    }
+    .btn-appeal {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(63,185,80,0.3);
+    }
+    .btn-appeal:hover { background: rgba(63,185,80,0.2); }
+    .btn-phone {
+      background: var(--blue-bg);
+      color: var(--blue);
+      border: 1px solid rgba(88,166,255,0.3);
+    }
+    .btn-phone:hover { background: rgba(88,166,255,0.15); }
+
+    /* ─── New Section Headers ─────────────────────────────────────── */
+    .new-section {
+      margin-top: 24px;
+    }
+    .new-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .new-section-header h2 {
+      font-size: clamp(18px, 2.5vw, 22px);
+    }
+    .new-section-header .section-icon {
+      font-size: 20px;
+    }
+
+    /* ─── Get Records Page ────────────────────────────────────────── */
+    .gr-hero {
+      text-align: center;
+      padding: 64px 0 40px;
+    }
+    .gr-hero .hero-subtitle {
+      margin: 16px auto 0;
+    }
+    .gr-section {
+      padding: 40px 0;
+    }
+    .gr-section h2 {
+      margin-bottom: 24px;
+    }
+    .gr-rights-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .gr-right-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .gr-right-item .gr-check {
+      color: var(--green);
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .gr-insurer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .gr-insurer-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s;
+    }
+    .gr-insurer-card:hover { border-color: var(--border2); }
+    .gr-insurer-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .gr-insurer-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .gr-insurer-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .gr-insurer-notes {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .gr-insurer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .gr-letter-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+    .gr-letter-text {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .gr-copy-btn {
+      margin-top: 12px;
+    }
+    .gr-dispute-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .gr-dispute-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .gr-dispute-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .gr-dispute-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .gr-dispute-card.gr-warning-card {
+      border-color: rgba(245,158,11,0.3);
+      background: var(--yellow-bg);
+    }
+    .gr-dispute-card.gr-warning-card h3 { color: var(--yellow); }
+    .gr-dispute-card.gr-warning-card p { color: var(--yellow); }
+    .gr-sol-table {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+    .gr-sol-table table { font-size: 14px; }
+    .gr-sol-table th { font-size: 12px; }
+    .gr-sol-table td { padding: 10px 14px; }
+    .gr-note {
+      font-size: 12px;
+      color: var(--text-faint);
+      font-style: italic;
+      margin-top: 12px;
+    }
+    .gr-cta {
+      text-align: center;
+      padding: 48px 0 64px;
+    }
+    .gr-cta p {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
@@ -1007,6 +1552,7 @@
     <a href="#/audit" class="nav-link" data-page="audit">Audit Bill</a>
     <a href="#/how-it-works" class="nav-link" data-page="how-it-works">How It Works</a>
     <a href="#/stats" class="nav-link" data-page="stats">Stats</a>
+    <a href="#/get-records" class="nav-link" data-page="get-records">Get Records</a>
   </div>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
     <svg id="hamburgerIcon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -1019,6 +1565,7 @@
   <a href="#/audit" class="nav-link" data-page="audit" role="menuitem">Audit a Bill</a>
   <a href="#/how-it-works" class="nav-link" data-page="how-it-works" role="menuitem">How It Works</a>
   <a href="#/stats" class="nav-link" data-page="stats" role="menuitem">Stats</a>
+  <a href="#/get-records" class="nav-link" data-page="get-records" role="menuitem">Get Records</a>
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -1219,6 +1766,21 @@
 
       <!-- Charity care section -->
       <div id="charitySection" style="margin-top:20px;display:none"></div>
+
+      <!-- Savings Summary (new) -->
+      <div id="savingsSummarySection" style="display:none;margin-top:24px"></div>
+
+      <!-- Billing Errors (new) -->
+      <div id="billingErrorsSection" style="display:none;margin-top:24px"></div>
+
+      <!-- Site of Service (new) -->
+      <div id="siteOfServiceSection" style="display:none;margin-top:24px"></div>
+
+      <!-- Balance Billing (new) -->
+      <div id="balanceBillingSection" style="display:none;margin-top:24px"></div>
+
+      <!-- Action Buttons (new) -->
+      <div id="actionButtonsSection" style="display:none;margin-top:24px"></div>
 
       <!-- Transparency stamp -->
       <div class="card collapsible" id="stampCollapsible" style="margin-top:16px">
@@ -1465,6 +2027,251 @@
   </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- GET RECORDS PAGE                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-get-records">
+  <div class="container">
+
+    <!-- Hero -->
+    <section class="gr-hero">
+      <h1 class="hero-title">Get Your <span style="color:var(--accent)">Medical Records</span></h1>
+      <p class="hero-subtitle">You have a legal right to every bill and EOB your insurance company has on file. Here's how to get them.</p>
+    </section>
+
+    <!-- Section 1: Your Rights Under HIPAA -->
+    <section class="gr-section">
+      <h2>Your Rights Under HIPAA</h2>
+      <div class="gr-rights-list">
+        <div class="gr-right-item">
+          <span class="gr-check">✓</span>
+          <span>Under federal law (HIPAA), you can request <strong style="color:var(--text)">ALL</strong> billing records and EOBs from providers and insurers.</span>
+        </div>
+        <div class="gr-right-item">
+          <span class="gr-check">✓</span>
+          <span>They must respond within <strong style="color:var(--text)">30 days</strong> of your request.</span>
+        </div>
+        <div class="gr-right-item">
+          <span class="gr-check">✓</span>
+          <span>They <strong style="color:var(--text)">cannot withhold records</strong> even if you have unpaid bills.</span>
+        </div>
+        <div class="gr-right-item">
+          <span class="gr-check">✓</span>
+          <span>You can request records in <strong style="color:var(--text)">electronic format</strong> (PDF, portal download, etc.).</span>
+        </div>
+        <div class="gr-right-item">
+          <span class="gr-check">✓</span>
+          <span>Inspecting records in person is <strong style="color:var(--text)">free</strong>; copies may have a reasonable fee.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Download Your EOBs -->
+    <section class="gr-section">
+      <h2>Download Your EOBs</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px">Log into your insurer's member portal to download your Explanation of Benefits documents.</p>
+      <div class="gr-insurer-grid">
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,101,195,0.15);color:#0065c3">U</div>
+            <div class="gr-insurer-name">UnitedHealthcare</div>
+          </div>
+          <div class="gr-insurer-notes">Claims &amp; EOBs section in your member dashboard</div>
+          <a href="https://www.myuhc.com" target="_blank" rel="noopener" class="gr-insurer-link">myuhc.com →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,98,163,0.15);color:#0062a3">A</div>
+            <div class="gr-insurer-name">Anthem / BCBS</div>
+          </div>
+          <div class="gr-insurer-notes">Benefits → Claims History</div>
+          <a href="https://www.anthem.com" target="_blank" rel="noopener" class="gr-insurer-link">anthem.com →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(123,0,154,0.15);color:#7b009a">Ae</div>
+            <div class="gr-insurer-name">Aetna</div>
+          </div>
+          <div class="gr-insurer-notes">Member portal → Claims</div>
+          <a href="https://www.aetna.com" target="_blank" rel="noopener" class="gr-insurer-link">aetna.com →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,119,73,0.15);color:#007749">C</div>
+            <div class="gr-insurer-name">Cigna</div>
+          </div>
+          <div class="gr-insurer-notes">Coverage → Claims</div>
+          <a href="https://www.mycigna.com" target="_blank" rel="noopener" class="gr-insurer-link">mycigna.com →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(69,154,62,0.15);color:#459a3e">H</div>
+            <div class="gr-insurer-name">Humana</div>
+          </div>
+          <div class="gr-insurer-notes">My Claims section</div>
+          <a href="https://www.humana.com" target="_blank" rel="noopener" class="gr-insurer-link">humana.com →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,90,158,0.15);color:#005a9e">K</div>
+            <div class="gr-insurer-name">Kaiser Permanente</div>
+          </div>
+          <div class="gr-insurer-notes">Medical Record section</div>
+          <a href="https://www.kp.org" target="_blank" rel="noopener" class="gr-insurer-link">kp.org →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,75,141,0.15);color:#004b8d">P</div>
+            <div class="gr-insurer-name">Premera Blue Cross</div>
+          </div>
+          <div class="gr-insurer-notes">Claims &amp; EOBs</div>
+          <a href="https://www.premera.com" target="_blank" rel="noopener" class="gr-insurer-link">premera.com →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,64,153,0.15);color:#004099">M</div>
+            <div class="gr-insurer-name">Medicare</div>
+          </div>
+          <div class="gr-insurer-notes">Claims History (Medicare Summary Notice)</div>
+          <a href="https://www.medicare.gov" target="_blank" rel="noopener" class="gr-insurer-link">medicare.gov →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,100,60,0.15);color:#00643c">Md</div>
+            <div class="gr-insurer-name">Medicaid</div>
+          </div>
+          <div class="gr-insurer-notes">Contact your state Medicaid office</div>
+          <a href="https://www.medicaid.gov" target="_blank" rel="noopener" class="gr-insurer-link">medicaid.gov →</a>
+        </div>
+
+        <div class="gr-insurer-card">
+          <div class="gr-insurer-top">
+            <div class="gr-insurer-icon" style="background:rgba(0,60,113,0.15);color:#003c71">T</div>
+            <div class="gr-insurer-name">TRICARE</div>
+          </div>
+          <div class="gr-insurer-notes">MHS GENESIS portal</div>
+          <a href="https://www.tricare.mil" target="_blank" rel="noopener" class="gr-insurer-link">tricare.mil →</a>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 3: Request Records by Mail -->
+    <section class="gr-section">
+      <h2>Request Records by Mail</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px">Copy this template letter and send it to your insurance company or healthcare provider.</p>
+      <div class="gr-letter-box">
+        <div class="gr-letter-text" id="hipaaLetterText">[Your Name]
+[Your Address]
+[Date]
+
+To: [Insurance Company] / [Provider Name]
+Re: HIPAA Access Request — Protected Health Information
+
+I am writing to request access to my complete designated record set as defined under 45 CFR § 164.524, including but not limited to:
+
+- All Explanation of Benefits (EOB) statements
+- Claims history and payment records
+- Billing records and itemized charges
+- Any correspondence regarding my claims
+
+Please provide these records in electronic format (PDF preferred) to: [your email]
+
+Under HIPAA, you are required to respond within 30 days.
+
+Sincerely,
+[Your Name]
+Member ID: [Your ID]
+Date of Birth: [DOB]</div>
+        <button class="btn btn-secondary btn-sm gr-copy-btn" onclick="copyHipaaLetter()">Copy to Clipboard</button>
+      </div>
+    </section>
+
+    <!-- Section 4: Can You Dispute Old Bills? -->
+    <section class="gr-section">
+      <h2>Can You Dispute Old Bills?</h2>
+      <div class="gr-dispute-cards">
+        <div class="gr-dispute-card">
+          <h3>Unpaid Bills</h3>
+          <p>Yes — you can dispute unpaid bills until the statute of limitations expires (typically 3–10 years depending on state). Use the table below to check your state.</p>
+        </div>
+        <div class="gr-dispute-card">
+          <h3>Already-Paid Bills</h3>
+          <p>You can request refunds for billing errors such as wrong CPT codes, duplicate charges, and upcoding. There is no time limit for requesting a billing correction, though recovery may be limited.</p>
+        </div>
+        <div class="gr-dispute-card">
+          <h3>Bills in Collections</h3>
+          <p>You can still negotiate — collection agencies typically accept 25–50 cents on the dollar. Request debt validation in writing within 30 days of first contact.</p>
+        </div>
+        <div class="gr-dispute-card gr-warning-card">
+          <h3>⚠ Warning: Restarting the Clock</h3>
+          <p>Making a payment on old debt can restart the statute of limitations in some states. Get legal advice before making any payment on time-barred debt.</p>
+        </div>
+        <div class="gr-dispute-card">
+          <h3>No Surprises Act</h3>
+          <p>Only applies to services after January 1, 2022. You must file a dispute within 120 days of receiving the bill. Applies to emergency services and out-of-network providers at in-network facilities.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Statutes of Limitations by State -->
+    <section class="gr-section">
+      <h2>Statutes of Limitations by State</h2>
+      <div class="gr-sol-table">
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Written Contract</th>
+              <th>Open Account</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Wisconsin</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Illinois</td><td>10 years</td><td>5 years</td></tr>
+            <tr><td>California</td><td>4 years</td><td>4 years</td></tr>
+            <tr><td>New York</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Texas</td><td>4 years</td><td>4 years</td></tr>
+            <tr><td>Florida</td><td>5 years</td><td>4 years</td></tr>
+            <tr><td>Pennsylvania</td><td>4 years</td><td>4 years</td></tr>
+            <tr><td>Ohio</td><td>8 years</td><td>6 years</td></tr>
+            <tr><td>Michigan</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Minnesota</td><td>6 years</td><td>6 years</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="gr-note">This is general information, not legal advice. Check your state's current law or consult an attorney.</p>
+    </section>
+
+    <!-- CTA -->
+    <section class="gr-cta">
+      <p>Ready to check your bills?</p>
+      <a href="#/audit" class="btn btn-primary btn-lg">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 1v16M1 9h16" opacity=".4"/><rect x="3" y="3" width="12" height="12" rx="2"/><path d="M6 9h6M6 6h4M6 12h3"/></svg>
+        Audit Your Bill
+      </a>
+    </section>
+
+  </div>
+
+  <footer>
+    <div class="container">
+      BillScan is a transparency tool, not legal or medical advice.
+      All rates from official <a href="https://www.cms.gov" target="_blank" rel="noopener">CMS.gov</a> data.
+    </div>
+  </footer>
+</div>
+
 <script>
 /* ============================================================================
    BillScan SPA — Vanilla JS
@@ -1478,6 +2285,7 @@ const pages = {
   '/audit'         : 'audit',
   '/how-it-works'  : 'how-it-works',
   '/stats'         : 'stats',
+  '/get-records'   : 'get-records',
 };
 
 function getRoute() {
@@ -1983,6 +2791,13 @@ function renderResults(report) {
     </div>
   `;
 
+  // ── New sections ──────────────────────────────────────────────────────────
+  renderSavingsSummary(report);
+  renderBillingErrors(report);
+  renderSiteOfService(report);
+  renderBalanceBilling(report);
+  renderActionButtons(report);
+
   // ── 3-Way Insurance Comparison ──────────────────────────────────────────────
   const insSection = document.getElementById('insuranceSection');
   const ic = report.insuranceComparison;
@@ -2122,6 +2937,340 @@ function renderInsuranceComparison(report, ic) {
   } else {
     footnoteEl.textContent = '';
   }
+}
+
+
+// ── Render new analysis sections ───────────────────────────────────────────────
+
+function renderSavingsSummary(report) {
+  const ss = report.savingsSummary;
+  const el = document.getElementById('savingsSummarySection');
+  if (!ss) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const unins = ss.uninsuredSavings || {};
+  const ins = ss.insuredSavings || {};
+  const tips = ss.universalTips || [];
+
+  el.innerHTML = `
+    <div class="new-section">
+      <div class="new-section-header">
+        <span class="section-icon">💰</span>
+        <h2>Savings Summary</h2>
+      </div>
+      <div class="savings-summary-grid">
+        <div class="savings-col">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            If You're Uninsured
+          </h3>
+          <div class="savings-big-num" style="color:var(--green)">${fmt$(unins.negotiationTarget)}</div>
+          <div class="savings-detail">Negotiation target price</div>
+          ${unins.potentialSavings ? `<div class="savings-detail" style="margin-top:8px">Potential savings: <strong style="color:var(--green)">${fmt$(unins.potentialSavings)}</strong></div>` : ''}
+          ${unins.strategy ? `<div class="savings-detail" style="margin-top:8px">${escHtml(unins.strategy)}</div>` : ''}
+        </div>
+        <div class="savings-col">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            If You Have Insurance
+          </h3>
+          <div class="savings-big-num" style="color:var(--green)">${fmt$(ins.totalActionableSavings)}</div>
+          <div class="savings-detail">Total actionable savings</div>
+          <div class="savings-breakdown">
+            ${ins.billingErrorSavings ? `<div class="savings-breakdown-item"><span class="sbi-label">Billing Errors</span><span class="sbi-val">${fmt$(ins.billingErrorSavings)}</span></div>` : ''}
+            ${ins.siteOfServiceSavings ? `<div class="savings-breakdown-item"><span class="sbi-label">Site of Service</span><span class="sbi-val">${fmt$(ins.siteOfServiceSavings)}</span></div>` : ''}
+            ${ins.balanceBillingSavings ? `<div class="savings-breakdown-item"><span class="sbi-label">Balance Billing</span><span class="sbi-val">${fmt$(ins.balanceBillingSavings)}</span></div>` : ''}
+          </div>
+          ${ins.strategies && ins.strategies.length > 0 ? `
+            <ul class="savings-strategies">
+              ${ins.strategies.map(s => `<li>${escHtml(s)}</li>`).join('')}
+            </ul>
+          ` : ''}
+        </div>
+      </div>
+      ${tips.length > 0 ? `
+        <div class="universal-tips">
+          <h4>Tips for Everyone</h4>
+          <ul>
+            ${tips.map(t => `<li>${escHtml(t)}</li>`).join('')}
+          </ul>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderBillingErrors(report) {
+  const errors = report.billingErrors;
+  const el = document.getElementById('billingErrorsSection');
+  if (!errors || errors.length === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const sevIcon = { alert: '🔴', warning: '⚠️', info: 'ℹ️' };
+  const sevClass = s => s === 'alert' ? 'severity-alert' : s === 'warning' ? 'severity-warning' : 'severity-info';
+  const typeClass = s => s === 'alert' ? 'type-alert' : s === 'warning' ? 'type-warning' : 'type-info';
+
+  el.innerHTML = `
+    <div class="new-section">
+      <div class="new-section-header">
+        <span class="section-icon">🔍</span>
+        <h2>Billing Errors Detected</h2>
+      </div>
+      <div class="billing-errors-list">
+        ${errors.map(err => `
+          <div class="billing-error-card ${sevClass(err.severity)}">
+            <div class="billing-error-header">
+              <span class="billing-error-icon">${sevIcon[err.severity] || 'ℹ️'}</span>
+              <span class="billing-error-type ${typeClass(err.severity)}">${escHtml(err.type || 'ERROR')}</span>
+              ${err.cptCodes && err.cptCodes.length ? `<span class="billing-error-codes">${err.cptCodes.map(c => escHtml(c)).join(', ')}</span>` : ''}
+            </div>
+            <div class="billing-error-desc">${escHtml(err.description || '')}</div>
+            ${err.potentialSavings ? `<div class="billing-error-savings">Potential savings: ${fmt$(err.potentialSavings)}</div>` : ''}
+            ${err.actionStep ? `<div class="billing-error-action"><strong>Action:</strong> ${escHtml(err.actionStep)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSiteOfService(report) {
+  const items = report.siteOfService;
+  const el = document.getElementById('siteOfServiceSection');
+  if (!items || !items.some(i => i.potentialSavings > 0)) { el.style.display = 'none'; return; }
+
+  const savingsItems = items.filter(i => i.potentialSavings > 0);
+  el.style.display = 'block';
+
+  el.innerHTML = `
+    <div class="new-section">
+      <div class="new-section-header">
+        <span class="section-icon">🏥</span>
+        <h2>You could save by choosing a different care setting</h2>
+      </div>
+      <div class="sos-cards">
+        ${savingsItems.map(item => `
+          <div class="sos-card">
+            <div class="sos-card-header">
+              <div>
+                <span class="sos-code">${escHtml(item.cptCode)}</span>
+                <span class="sos-desc" style="margin-left:8px">${escHtml(item.description || '')}</span>
+              </div>
+              ${item.isShoppable ? '<span class="sos-shoppable">🛒 Shoppable</span>' : ''}
+            </div>
+            <div class="sos-rates">
+              <div class="sos-rate-box">
+                <div class="sos-rate-label">Billed</div>
+                <div class="sos-rate-val" style="color:var(--red)">${fmt$(item.billedAmount)}</div>
+              </div>
+              <div class="sos-rate-box">
+                <div class="sos-rate-label">Hospital Rate</div>
+                <div class="sos-rate-val" style="color:var(--yellow)">${fmt$(item.facilityRate)}</div>
+              </div>
+              <div class="sos-rate-box">
+                <div class="sos-rate-label">Office Rate</div>
+                <div class="sos-rate-val" style="color:var(--green)">${fmt$(item.nonFacilityRate)}</div>
+              </div>
+              ${item.oppsRate ? `
+              <div class="sos-rate-box">
+                <div class="sos-rate-label">OPPS Rate</div>
+                <div class="sos-rate-val" style="color:var(--blue)">${fmt$(item.oppsRate)}</div>
+              </div>` : ''}
+            </div>
+            <div class="sos-savings-row">
+              <span class="sos-savings-amount">Save ${fmt$(item.potentialSavings)}</span>
+              ${item.savingsPercent ? `<span class="sos-savings-pct">${item.savingsPercent}% savings</span>` : ''}
+            </div>
+            ${item.recommendation ? `<div class="sos-recommendation">${escHtml(item.recommendation)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBalanceBilling(report) {
+  const items = report.balanceBilling;
+  const el = document.getElementById('balanceBillingSection');
+  if (!items || items.length === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+
+  el.innerHTML = `
+    <div class="new-section">
+      <div class="new-section-header">
+        <span class="section-icon">⚖️</span>
+        <h2>Balance Billing Alerts</h2>
+      </div>
+      <div class="bb-cards">
+        ${items.map(item => `
+          <div class="bb-card ${item.severity === 'warning' ? 'bb-warning' : ''}">
+            <div class="bb-header">
+              <span class="bb-type-badge">${escHtml(item.type || 'BALANCE BILLING')}</span>
+              ${item.cptCode ? `<span style="font-family:var(--font-mono);font-size:12px;color:var(--blue);font-weight:600">${escHtml(item.cptCode)}</span>` : ''}
+            </div>
+            <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:10px">${escHtml(item.description || '')}</div>
+            <div class="bb-amounts">
+              ${item.insuranceAllowed != null ? `<div class="bb-amount-box"><div class="bb-amount-label">Insurance Allowed</div><div class="bb-amount-val" style="color:var(--blue)">${fmt$(item.insuranceAllowed)}</div></div>` : ''}
+              ${item.providerBilled != null ? `<div class="bb-amount-box"><div class="bb-amount-label">Provider Billed</div><div class="bb-amount-val" style="color:var(--red)">${fmt$(item.providerBilled)}</div></div>` : ''}
+              ${item.patientResponsibility != null ? `<div class="bb-amount-box"><div class="bb-amount-label">Patient Owes</div><div class="bb-amount-val" style="color:var(--yellow)">${fmt$(item.patientResponsibility)}</div></div>` : ''}
+              ${item.excessAmount != null ? `<div class="bb-amount-box"><div class="bb-amount-label">Excess Amount</div><div class="bb-amount-val" style="color:var(--red)">${fmt$(item.excessAmount)}</div></div>` : ''}
+            </div>
+            ${item.legalBasis ? `<div class="bb-legal">${escHtml(item.legalBasis)}</div>` : ''}
+            ${item.actionStep ? `<div class="bb-action"><strong>Action:</strong> ${escHtml(item.actionStep)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderActionButtons(report) {
+  const el = document.getElementById('actionButtonsSection');
+  el.style.display = 'block';
+
+  el.innerHTML = `
+    <div class="action-buttons-row">
+      <button class="btn btn-appeal" id="downloadAppealBtn">
+        📄 Download Appeal Letter
+      </button>
+      <button class="btn btn-phone" id="downloadPhoneScriptBtn">
+        📞 Download Phone Script
+      </button>
+    </div>
+  `;
+
+  document.getElementById('downloadAppealBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('downloadAppealBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/appeal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          findings: report.findings || [],
+          eobData: report.eobData || undefined,
+          patientContext: {
+            isUninsured: !report.eobData,
+            facilityName: report.facilityName,
+          }
+        })
+      });
+      if (!res.ok) throw new Error('Appeal generation failed');
+      const data = await res.json();
+      const text = data.appealLetterDraft || JSON.stringify(data, null, 2);
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'billscan-appeal-letter.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Error generating appeal letter: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📄 Download Appeal Letter';
+    }
+  });
+
+  document.getElementById('downloadPhoneScriptBtn').addEventListener('click', () => {
+    const findings = report.findings || [];
+    const totalBilled = report.totalBilled || 0;
+    const totalCms = report.totalCmsBaseline || 0;
+    const facilityName = report.facilityName || '[Provider Name]';
+
+    const cptLines = findings.map(f => {
+      const cms = f.cmsRateUsed ? fmt$(f.cmsRateUsed) : 'N/A';
+      return `  - CPT ${f.cptCode}: You billed ${fmt$(f.billedAmount)}, Medicare rate is ${cms}`;
+    }).join('\n');
+
+    const savingsPct = totalCms > 0 ? Math.round((1 - totalCms / totalBilled) * 100) : 0;
+
+    const script = `NEGOTIATION PHONE SCRIPT — BillScan
+====================================
+
+BEFORE YOU CALL:
+- Have your bill and this script in front of you
+- Note the date, time, and name of everyone you speak with
+- Be polite but firm — billing staff deal with disputes daily
+- Ask for a billing supervisor if the first person can't help
+
+OPENING:
+"Hi, my name is [YOUR NAME]. I'm calling about my bill from ${facilityName}.
+My account number is [ACCOUNT NUMBER]. I'd like to discuss the charges."
+
+STATING YOUR CASE:
+"I've compared my charges to the Medicare fee schedule rates published by CMS.
+My total bill is ${fmt$(totalBilled)}, but the Medicare benchmark for these
+same services is ${fmt$(totalCms)} — that's ${savingsPct}% higher than what
+Medicare pays for identical procedures.
+
+Here are the specific charges I'd like to discuss:
+${cptLines}
+
+I understand that commercial rates differ from Medicare, but a ${savingsPct}%
+markup is significantly above typical levels."
+
+NEGOTIATION POINTS:
+1. "Can you offer a self-pay or prompt-pay discount?"
+   (Many providers offer 20-40% off for immediate payment)
+
+2. "I'd like to request the Medicare rate plus 20%, which is
+   ${fmt$(totalCms * 1.2)}. This is a common benchmark for
+   self-pay negotiations."
+
+3. "Can you set up a payment plan at a reduced rate?"
+
+4. "I'd like an itemized bill showing every charge with CPT codes."
+   (Sometimes errors are found when itemized bills are requested)
+
+5. "Does your facility have a financial assistance or charity care program?"
+   (Nonprofit hospitals are required to have these programs)
+
+IF THEY PUSH BACK:
+"I'm prepared to file a formal dispute and have documentation comparing
+every charge to the official CMS fee schedule. I'd prefer to resolve
+this directly. What can you offer?"
+
+IF THEY AGREE TO A REDUCTION:
+"Thank you. Can you please send me written confirmation of this
+adjusted amount by [email/mail]? I'd like to have the agreement
+documented before making payment."
+
+CLOSING:
+"Thank you for your time, [NAME]. For my records, your name is
+[NAME] and today's date is [DATE]. I'll follow up in writing."
+
+AFTER THE CALL:
+- Send a follow-up email or letter confirming what was agreed
+- Keep all documentation
+- If unsatisfied, consider filing a complaint with your state's
+  Attorney General or Department of Insurance
+
+Generated by BillScan — billscan.app
+`;
+
+    const blob = new Blob([script], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'billscan-phone-script.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+// ── Copy HIPAA letter ──────────────────────────────────────────────────────────
+function copyHipaaLetter() {
+  const text = document.getElementById('hipaaLetterText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.gr-copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
 }
 
 // Export JSON

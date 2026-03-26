@@ -18,6 +18,8 @@ import { compareSiteOfService } from './analyzer/site-of-service.js';
 import { detectBalanceBilling } from './analyzer/balance-billing.js';
 import { buildSavingsSummary } from './analyzer/savings-summary.js';
 import { getAggregateStats } from './output/stats.js';
+import { generateAppealEvidence } from './dispute/appeal-generator.js';
+import { lookupHospitalPrices, getCashPrice, getNegotiatedRate, getPriceSummary } from './matcher/hospital-price-lookup.js';
 import { getDb } from './db/connection.js';
 import { runMigrations } from './db/migrations.js';
 import type { ExtractedEobData } from './parser/eob-ocr-extractor.js';
@@ -461,6 +463,16 @@ async function handleAuditFile(
       response.charityCheck = charityResult;
     }
 
+    // ── Hospital price enrichment ───────────────────────────────────────────
+    try {
+      response.findings = await enrichFindingsWithHospitalPrices(
+        report.findings,
+        report.facilityName,
+      );
+    } catch (err) {
+      console.error('[server] Hospital price enrichment failed:', err);
+    }
+
     // ── New analyzers ─────────────────────────────────────────────────────────
 
     // Determine rate context for billing error detection
@@ -633,6 +645,16 @@ async function handleAuditJson(
       response.charityCheck = charityResult;
     }
 
+    // ── Hospital price enrichment (JSON endpoint) ─────────────────────────────
+    try {
+      response.findings = await enrichFindingsWithHospitalPrices(
+        report.findings,
+        report.facilityName,
+      );
+    } catch (err) {
+      console.error('[server] Hospital price enrichment failed:', err);
+    }
+
     // ── New analyzers (JSON endpoint) ───────────────────────────────────────
 
     const jsonRateContext: 'facility' | 'non_facility' = auditOptions.setting === 'office'
@@ -744,6 +766,113 @@ async function handleCharityCheck(
   }
 }
 
+// ─── Hospital Prices endpoint ─────────────────────────────────────────────────
+
+async function handleHospitalPrices(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: string
+) {
+  try {
+    const params = parseQueryParams(url);
+    const code = params.code;
+    if (!code) {
+      return sendError(res, 400, 'Missing required query parameter: code');
+    }
+
+    const hospital = params.hospital || undefined;
+    const payer = params.payer || undefined;
+
+    const prices = await lookupHospitalPrices(code, hospital, payer);
+    const summary = await getPriceSummary(code, hospital);
+
+    sendJson(res, 200, {
+      code,
+      hospital: hospital ?? null,
+      payer: payer ?? null,
+      prices,
+      summary,
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+/**
+ * Enrich audit findings with hospital price data if available.
+ */
+async function enrichFindingsWithHospitalPrices(
+  findings: Array<any>,
+  facilityName?: string
+): Promise<Array<any>> {
+  const enriched = [];
+  for (const finding of findings) {
+    try {
+      const cashPrice = await getCashPrice(finding.cptCode, facilityName);
+      const prices = await lookupHospitalPrices(finding.cptCode, facilityName);
+
+      if (prices.length > 0 || cashPrice !== null) {
+        const negotiatedRates = prices
+          .filter(p => p.negotiatedRate !== null && p.payerName !== null)
+          .map(p => ({
+            payer: p.payerName!,
+            plan: p.planName,
+            rate: p.negotiatedRate!,
+          }));
+
+        const grossCharges = prices
+          .filter(p => p.grossCharge !== null)
+          .map(p => p.grossCharge!);
+
+        finding.hospitalPrices = {
+          cashPrice,
+          negotiatedRates: negotiatedRates.length > 0 ? negotiatedRates : null,
+          grossCharge: grossCharges.length > 0 ? grossCharges[0] : null,
+        };
+      }
+    } catch {
+      // Hospital price data not available — skip silently
+    }
+    enriched.push(finding);
+  }
+  return enriched;
+}
+
+
+async function handleAppeal(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  try {
+    let body: Buffer;
+    try {
+      body = await readBody(req);
+    } catch (err) {
+      return sendError(res, 413, (err as Error).message);
+    }
+
+    let parsed: { findings?: any[]; eobData?: any; patientContext?: any };
+    try {
+      parsed = JSON.parse(body.toString('utf-8'));
+    } catch {
+      return sendError(res, 400, 'Invalid JSON body');
+    }
+
+    if (!parsed.findings || !Array.isArray(parsed.findings)) {
+      return sendError(res, 400, 'findings array is required');
+    }
+
+    const appealEvidence = generateAppealEvidence(
+      parsed.findings,
+      parsed.eobData,
+      parsed.patientContext,
+    );
+    sendJson(res, 200, appealEvidence);
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
 // ─── Main request router ──────────────────────────────────────────────────────
 
 async function requestHandler(
@@ -784,6 +913,12 @@ async function requestHandler(
     }
     if (method === 'POST' && pathname === '/api/charity-check') {
       return handleCharityCheck(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/appeal') {
+      return handleAppeal(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/hospital-prices') {
+      return handleHospitalPrices(req, res, url);
     }
     return sendError(res, 404, `API endpoint not found: ${method} ${pathname}`);
   }

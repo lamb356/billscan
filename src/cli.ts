@@ -16,6 +16,9 @@ import { renderViralCard } from './output/card-renderer.js';
 import { getAggregateStats, formatStats } from './output/stats.js';
 import { generateDisputeLetter } from './dispute/letter-generator.js';
 import { generatePhoneScript } from './dispute/phone-script.js';
+import { parseHospitalPriceFile } from './collector/hospital-price-parser.js';
+import { importHospitalPrices, getHospitalPriceStats } from './collector/hospital-price-importer.js';
+import { lookupHospitalPrices, getPriceSummary } from './matcher/hospital-price-lookup.js';
 import { closeDb } from './db/connection.js';
 import { runMigrations } from './db/migrations.js';
 import { basename } from 'node:path';
@@ -337,6 +340,110 @@ program
       console.log('\n' + formatStats(stats));
     } catch (err) {
       console.error(`\n❌ ${(err as Error).message}`);
+    } finally {
+      closeDb();
+    }
+  });
+
+program
+  .command('import-hospital-prices <url-or-file>')
+  .description('Import a hospital price transparency MRF (CSV) file')
+  .option('--hospital-name <name>', 'Override the hospital name from the file')
+  .action(async (urlOrFile, opts) => {
+    try {
+      await ensureDb();
+      console.log(`\n=== BillScan Hospital Price Transparency Importer ===`);
+      console.log(`Source: ${urlOrFile}\n`);
+
+      const sourceUrl = urlOrFile.startsWith('http') ? urlOrFile : `file://${urlOrFile}`;
+
+      const rows = await parseHospitalPriceFile(
+        urlOrFile,
+        sourceUrl,
+        opts.hospitalName ? { hospitalName: opts.hospitalName } : undefined
+      );
+
+      if (rows.length === 0) {
+        console.log('\n⚠️  No CPT/HCPCS rows found in the file.');
+        return;
+      }
+
+      console.log(`\nParsed ${rows.length} CPT/HCPCS rows. Importing...`);
+      const { inserted, skipped } = await importHospitalPrices(rows, sourceUrl);
+
+      const stats = await getHospitalPriceStats();
+      console.log(`\n✅ Import complete:`);
+      console.log(`   Inserted: ${inserted}`);
+      console.log(`   Skipped:  ${skipped}`);
+      console.log(`   Total hospital price rows in DB: ${stats.totalRows}`);
+      console.log(`   Hospitals: ${stats.hospitalCount}`);
+      console.log(`   Payers:    ${stats.payerCount}`);
+      console.log(`   Codes:     ${stats.codeCount}`);
+    } catch (err) {
+      console.error(`\n❌ ${(err as Error).message}`);
+      process.exit(1);
+    } finally {
+      closeDb();
+    }
+  });
+
+program
+  .command('hospital-prices <cpt-code>')
+  .description('Look up hospital-specific prices for a CPT code')
+  .option('--hospital <name>', 'Filter by hospital name')
+  .option('--payer <name>', 'Filter by payer/insurer name')
+  .action(async (cptCode, opts) => {
+    try {
+      await ensureDb();
+      console.log(`\n=== Hospital Price Lookup: ${cptCode} ===\n`);
+
+      const prices = await lookupHospitalPrices(cptCode, opts.hospital, opts.payer);
+
+      if (prices.length === 0) {
+        console.log('No hospital price data found for this code.');
+        console.log('Import hospital MRF data first with: billscan import-hospital-prices <url-or-file>');
+        return;
+      }
+
+      for (const p of prices) {
+        const parts = [`  ${p.hospitalName}`];
+        if (p.payerName) parts.push(`| Payer: ${p.payerName}`);
+        if (p.planName) parts.push(`(${p.planName})`);
+        console.log(parts.join(' '));
+        const rates: string[] = [];
+        if (p.grossCharge !== null) rates.push(`Gross: $${p.grossCharge.toFixed(2)}`);
+        if (p.negotiatedRate !== null) rates.push(`Negotiated: $${p.negotiatedRate.toFixed(2)}`);
+        if (p.cashDiscountPrice !== null) rates.push(`Cash: $${p.cashDiscountPrice.toFixed(2)}`);
+        if (p.minNegotiated !== null && p.maxNegotiated !== null) {
+          rates.push(`Range: $${p.minNegotiated.toFixed(2)}-$${p.maxNegotiated.toFixed(2)}`);
+        }
+        console.log(`    ${rates.join(' | ')}`);
+        if (p.setting) console.log(`    Setting: ${p.setting}`);
+        console.log();
+      }
+
+      // Summary
+      const summary = await getPriceSummary(cptCode, opts.hospital);
+      console.log(`─── Summary ───`);
+      console.log(`  Hospitals with data: ${summary.hospitalCount}`);
+      if (summary.cashPriceRange) {
+        console.log(`  Cash price range: $${summary.cashPriceRange[0].toFixed(2)} - $${summary.cashPriceRange[1].toFixed(2)}`);
+      }
+      if (summary.negotiatedRange) {
+        console.log(`  Negotiated range: $${summary.negotiatedRange[0].toFixed(2)} - $${summary.negotiatedRange[1].toFixed(2)}`);
+      }
+      if (summary.grossChargeRange) {
+        console.log(`  Gross charge range: $${summary.grossChargeRange[0].toFixed(2)} - $${summary.grossChargeRange[1].toFixed(2)}`);
+      }
+      if (summary.payerRates.length > 0) {
+        console.log(`  Payer rates:`);
+        for (const pr of summary.payerRates) {
+          console.log(`    ${pr.payer}: $${pr.rate.toFixed(2)}`);
+        }
+      }
+    } catch (err) {
+      console.error(`\n❌ ${(err as Error).message}`);
+      process.exit(1);
     } finally {
       closeDb();
     }

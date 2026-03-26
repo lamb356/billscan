@@ -145,6 +145,40 @@ export async function runMigrations(): Promise<void> {
     { sql: `CREATE INDEX IF NOT EXISTS idx_charity_zip ON charity_hospitals(zip_code)`, args: [] },
   ]);
 
+  // Hospital price transparency table
+  await db.batch([
+    {
+      sql: `CREATE TABLE IF NOT EXISTS hospital_prices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hospital_name TEXT NOT NULL,
+        hospital_ein TEXT,
+        hospital_npi TEXT,
+        cms_certification_number TEXT,
+        last_updated TEXT,
+        payer_name TEXT,
+        plan_name TEXT,
+        billing_code_type TEXT,
+        billing_code TEXT NOT NULL,
+        description TEXT,
+        negotiated_rate REAL,
+        negotiated_type TEXT,
+        gross_charge REAL,
+        cash_discount_price REAL,
+        min_negotiated REAL,
+        max_negotiated REAL,
+        setting TEXT,
+        modifier TEXT,
+        effective_date TEXT,
+        source_url TEXT,
+        fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )`, args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_hospital_prices_code ON hospital_prices(billing_code)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_hospital_prices_hospital ON hospital_prices(hospital_name)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_hospital_prices_payer ON hospital_prices(payer_name)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_hospital_prices_code_payer ON hospital_prices(billing_code, payer_name)`, args: [] },
+  ]);
+
   // Phase 3 migration: add user_id to audits, add users table
   // ALTER TABLE is idempotent-safe via try/catch
   try {
