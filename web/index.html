@@ -2105,8 +2105,8 @@
             <div class="gr-insurer-icon" style="background:rgba(0,119,73,0.15);color:#007749">C</div>
             <div class="gr-insurer-name">Cigna</div>
           </div>
-          <div class="gr-insurer-notes">Coverage → Claims</div>
-          <a href="https://www.mycigna.com" target="_blank" rel="noopener" class="gr-insurer-link">mycigna.com →</a>
+          <div class="gr-insurer-notes">Log in → View Claims → Claims & EOBs</div>
+          <a href="https://my.cigna.com/web/public/guest" target="_blank" rel="noopener" class="gr-insurer-link">my.cigna.com →</a>
         </div>
 
         <div class="gr-insurer-card">
@@ -2114,8 +2114,8 @@
             <div class="gr-insurer-icon" style="background:rgba(69,154,62,0.15);color:#459a3e">H</div>
             <div class="gr-insurer-name">Humana</div>
           </div>
-          <div class="gr-insurer-notes">My Claims section</div>
-          <a href="https://www.humana.com" target="_blank" rel="noopener" class="gr-insurer-link">humana.com →</a>
+          <div class="gr-insurer-notes">Log in → My Claims → View EOBs</div>
+          <a href="https://www.humana.com/member/claims-and-eob" target="_blank" rel="noopener" class="gr-insurer-link">humana.com/member/claims →</a>
         </div>
 
         <div class="gr-insurer-card">
@@ -2227,6 +2227,9 @@ Date of Birth: [DOB]</div>
     <!-- Section 5: Statutes of Limitations by State -->
     <section class="gr-section">
       <h2>Statutes of Limitations by State</h2>
+      <div class="gr-sol-search">
+        <input type="text" id="solSearchInput" placeholder="Search your state..." style="width:100%;max-width:360px;padding:10px 14px;background:var(--bg-darker,#0d1117);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:16px" oninput="filterSOLTable()">
+      </div>
       <div class="gr-sol-table">
         <table>
           <thead>
@@ -2236,21 +2239,72 @@ Date of Birth: [DOB]</div>
               <th>Open Account</th>
             </tr>
           </thead>
-          <tbody>
-            <tr><td>Wisconsin</td><td>6 years</td><td>6 years</td></tr>
-            <tr><td>Illinois</td><td>10 years</td><td>5 years</td></tr>
-            <tr><td>California</td><td>4 years</td><td>4 years</td></tr>
-            <tr><td>New York</td><td>6 years</td><td>6 years</td></tr>
-            <tr><td>Texas</td><td>4 years</td><td>4 years</td></tr>
+          <tbody id="solTableBody">
+            <tr><td>Alabama</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Alaska</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>Arizona</td><td>6 years</td><td>3 years</td></tr>
+            <tr><td>Arkansas</td><td>5 years</td><td>3 years</td></tr>
+            <tr><td>California</td><td>4 years</td><td>2 years</td></tr>
+            <tr><td>Colorado</td><td>6 years</td><td>3 years</td></tr>
+            <tr><td>Connecticut</td><td>6 years</td><td>3 years</td></tr>
+            <tr><td>Delaware</td><td>3 years</td><td>3 years</td></tr>
             <tr><td>Florida</td><td>5 years</td><td>4 years</td></tr>
-            <tr><td>Pennsylvania</td><td>4 years</td><td>4 years</td></tr>
-            <tr><td>Ohio</td><td>8 years</td><td>6 years</td></tr>
+            <tr><td>Georgia</td><td>6 years</td><td>4 years</td></tr>
+            <tr><td>Hawaii</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Idaho</td><td>5 years</td><td>4 years</td></tr>
+            <tr><td>Illinois</td><td>10 years</td><td>5 years</td></tr>
+            <tr><td>Indiana</td><td>10 years</td><td>6 years</td></tr>
+            <tr><td>Iowa</td><td>10 years</td><td>5 years</td></tr>
+            <tr><td>Kansas</td><td>5 years</td><td>3 years</td></tr>
+            <tr><td>Kentucky</td><td>10 years</td><td>5 years</td></tr>
+            <tr><td>Louisiana</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>Maine</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Maryland</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>Massachusetts</td><td>6 years</td><td>3 years</td></tr>
             <tr><td>Michigan</td><td>6 years</td><td>6 years</td></tr>
             <tr><td>Minnesota</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Mississippi</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>Missouri</td><td>10 years</td><td>5 years</td></tr>
+            <tr><td>Montana</td><td>8 years</td><td>5 years</td></tr>
+            <tr><td>Nebraska</td><td>5 years</td><td>4 years</td></tr>
+            <tr><td>Nevada</td><td>6 years</td><td>4 years</td></tr>
+            <tr><td>New Hampshire</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>New Jersey</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>New Mexico</td><td>6 years</td><td>4 years</td></tr>
+            <tr><td>New York</td><td>6 years</td><td>3 years</td></tr>
+            <tr><td>North Carolina</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>North Dakota</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Ohio</td><td>8 years</td><td>6 years</td></tr>
+            <tr><td>Oklahoma</td><td>5 years</td><td>3 years</td></tr>
+            <tr><td>Oregon</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Pennsylvania</td><td>4 years</td><td>4 years</td></tr>
+            <tr><td>Rhode Island</td><td>10 years</td><td>3 years</td></tr>
+            <tr><td>South Carolina</td><td>3 years</td><td>3 years</td></tr>
+            <tr><td>South Dakota</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Tennessee</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Texas</td><td>4 years</td><td>4 years</td></tr>
+            <tr><td>Utah</td><td>6 years</td><td>4 years</td></tr>
+            <tr><td>Vermont</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Virginia</td><td>5 years</td><td>3 years</td></tr>
+            <tr><td>Washington</td><td>6 years</td><td>3 years</td></tr>
+            <tr><td>West Virginia</td><td>10 years</td><td>2 years</td></tr>
+            <tr><td>Wisconsin</td><td>6 years</td><td>6 years</td></tr>
+            <tr><td>Wyoming</td><td>10 years</td><td>8 years</td></tr>
+            <tr><td>Washington D.C.</td><td>3 years</td><td>3 years</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="gr-note">This is general information, not legal advice. Check your state's current law or consult an attorney.</p>
+      <div class="gr-sol-warnings" style="margin-top:20px;padding:16px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px">
+        <h4 style="color:#ef4444;margin:0 0 10px;font-size:15px">⚠️ Important Warnings About Old Debt</h4>
+        <ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.8;color:var(--text-muted)">
+          <li><strong>Making any payment</strong> on an old debt can restart the statute of limitations in many states. Do not pay anything on old medical debt without checking your state's rules first.</li>
+          <li><strong>Acknowledging the debt in writing</strong> can also restart the clock in some states.</li>
+          <li><strong>The statute of limitations only prevents lawsuits</strong> — it does not erase the debt. Collectors can still contact you.</li>
+          <li><strong>Medical debt no longer appears on credit reports</strong> as of 2025 (CFPB rule). This applies to all medical collections regardless of amount.</li>
+          <li><strong>If a collector sues you on time-barred debt</strong>, you must raise the statute of limitations as an affirmative defense in court — the judge won't do it for you.</li>
+        </ul>
+      </div>
+      <p class="gr-note" style="margin-top:12px">Source: <a href="https://billkarma.app/guides/medical-debt-statute-of-limitations" target="_blank" rel="noopener" style="color:var(--green)">BillKarma 2026 State-by-State Guide</a>. This is general information, not legal advice. Laws change — verify with your state attorney general's office or consult an attorney.</p>
     </section>
 
     <!-- CTA -->
@@ -2278,6 +2332,16 @@ Date of Birth: [DOB]</div>
    ============================================================================ */
 
 const API = ''; // same origin
+
+// ── SOL Table Search ───
+function filterSOLTable() {
+  const q = (document.getElementById('solSearchInput')?.value || '').toLowerCase();
+  const rows = document.querySelectorAll('#solTableBody tr');
+  rows.forEach(row => {
+    const state = row.cells[0]?.textContent?.toLowerCase() || '';
+    row.style.display = state.includes(q) ? '' : 'none';
+  });
+}
 
 // ── Router ───────────────────────────────────────────────────────────────────
 const pages = {
