@@ -13,6 +13,10 @@ import { runAudit } from './analyzer/audit.js';
 import { runEobAudit } from './analyzer/eob-audit.js';
 import { buildInsuranceComparison, type InsuranceComparison } from './analyzer/insurance-comparison.js';
 import { checkCharityCare } from './analyzer/charity-care.js';
+import { detectBillingErrors } from './analyzer/billing-errors.js';
+import { compareSiteOfService } from './analyzer/site-of-service.js';
+import { detectBalanceBilling } from './analyzer/balance-billing.js';
+import { buildSavingsSummary } from './analyzer/savings-summary.js';
 import { getAggregateStats } from './output/stats.js';
 import { getDb } from './db/connection.js';
 import { runMigrations } from './db/migrations.js';
@@ -457,6 +461,103 @@ async function handleAuditFile(
       response.charityCheck = charityResult;
     }
 
+    // ── New analyzers ─────────────────────────────────────────────────────────
+
+    // Determine rate context for billing error detection
+    const rateContext: 'facility' | 'non_facility' = auditOptions.setting === 'office'
+      ? 'non_facility'
+      : (report.findings[0]?.rateContext ?? 'facility');
+
+    // 1. Billing error detection
+    try {
+      const lineItemsForErrors = report.findings.map(f => ({
+        cptCode: f.cptCode,
+        description: f.description,
+        billedAmount: f.billedAmount,
+        lineNumber: f.lineNumber,
+        modifier: undefined as string | undefined, // modifier not stored on finding
+      }));
+      const billingErrors = await detectBillingErrors(
+        lineItemsForErrors,
+        rateContext,
+        auditOptions.locality || auditOptions.zip || undefined,
+      );
+      response.billingErrors = billingErrors;
+    } catch (err) {
+      console.error('[server] Billing error detection failed:', err);
+      response.billingErrors = [];
+    }
+
+    // 2. Site-of-service comparison
+    try {
+      const lineItemsForSos = report.findings.map(f => ({
+        cptCode: f.cptCode,
+        description: f.description,
+        billedAmount: f.billedAmount,
+      }));
+      const siteOfService = await compareSiteOfService(
+        lineItemsForSos,
+        auditOptions.locality || undefined,
+      );
+      response.siteOfService = siteOfService;
+    } catch (err) {
+      console.error('[server] Site-of-service comparison failed:', err);
+      response.siteOfService = [];
+    }
+
+    // 3. Balance billing detection (only when EOB data is present)
+    try {
+      const findingsForBB = report.findings.map(f => ({
+        cptCode: f.cptCode,
+        description: f.description,
+        billedAmount: f.billedAmount,
+        cmsRateUsed: f.cmsRateUsed,
+      }));
+
+      // Build EOB data object if we have EOB info
+      let eobDataForBB: {
+        summary?: { amountBilled: number | null; patientResponsibility: number | null; planPaid: number | null; networkDiscount: number | null };
+        lineItems?: Array<{ cptCode: string | null; billedAmount: number; allowedAmount: number | null; patientOwes: number | null }>;
+      } | undefined;
+
+      if (isEob && eobRaw) {
+        eobDataForBB = {
+          summary: eobRaw.summary ? {
+            amountBilled: eobRaw.summary.amountBilled,
+            patientResponsibility: eobRaw.summary.patientResponsibility,
+            planPaid: eobRaw.summary.planPaid,
+            networkDiscount: eobRaw.summary.networkDiscount,
+          } : undefined,
+          lineItems: eobRaw.lineItems?.map(li => ({
+            cptCode: li.cptCode ?? null,
+            billedAmount: li.billedAmount ?? 0,
+            allowedAmount: li.allowedAmount ?? null,
+            patientOwes: li.patientOwes ?? null,
+          })),
+        };
+      }
+
+      const balanceBilling = await detectBalanceBilling(findingsForBB, eobDataForBB);
+      response.balanceBilling = balanceBilling;
+    } catch (err) {
+      console.error('[server] Balance billing detection failed:', err);
+      response.balanceBilling = [];
+    }
+
+    // 4. Unified savings summary
+    try {
+      const savingsSummary = buildSavingsSummary(
+        report.totalBilled,
+        report.totalCmsBaseline,
+        (response.billingErrors as any[]) || [],
+        (response.siteOfService as any[]) || [],
+        (response.balanceBilling as any[]) || [],
+      );
+      response.savingsSummary = savingsSummary;
+    } catch (err) {
+      console.error('[server] Savings summary failed:', err);
+    }
+
     sendJson(res, 200, response);
   } catch (err) {
     const msg = (err as Error).message;
@@ -530,6 +631,74 @@ async function handleAuditJson(
     if (params.charity === 'true' && report.facilityName) {
       const charityResult = await checkCharityCare(report.facilityName, params.zip, params.state);
       response.charityCheck = charityResult;
+    }
+
+    // ── New analyzers (JSON endpoint) ───────────────────────────────────────
+
+    const jsonRateContext: 'facility' | 'non_facility' = auditOptions.setting === 'office'
+      ? 'non_facility'
+      : (report.findings[0]?.rateContext ?? 'facility');
+
+    // 1. Billing error detection
+    try {
+      const lineItemsForErrors = report.findings.map(f => ({
+        cptCode: f.cptCode,
+        description: f.description,
+        billedAmount: f.billedAmount,
+        lineNumber: f.lineNumber,
+        modifier: undefined as string | undefined,
+      }));
+      response.billingErrors = await detectBillingErrors(
+        lineItemsForErrors,
+        jsonRateContext,
+        auditOptions.locality || auditOptions.zip || undefined,
+      );
+    } catch (err) {
+      console.error('[server] Billing error detection failed:', err);
+      response.billingErrors = [];
+    }
+
+    // 2. Site-of-service comparison
+    try {
+      const lineItemsForSos = report.findings.map(f => ({
+        cptCode: f.cptCode,
+        description: f.description,
+        billedAmount: f.billedAmount,
+      }));
+      response.siteOfService = await compareSiteOfService(
+        lineItemsForSos,
+        auditOptions.locality || undefined,
+      );
+    } catch (err) {
+      console.error('[server] Site-of-service comparison failed:', err);
+      response.siteOfService = [];
+    }
+
+    // 3. Balance billing detection (no EOB data in JSON endpoint, but still checks excessive markup)
+    try {
+      const findingsForBB = report.findings.map(f => ({
+        cptCode: f.cptCode,
+        description: f.description,
+        billedAmount: f.billedAmount,
+        cmsRateUsed: f.cmsRateUsed,
+      }));
+      response.balanceBilling = await detectBalanceBilling(findingsForBB);
+    } catch (err) {
+      console.error('[server] Balance billing detection failed:', err);
+      response.balanceBilling = [];
+    }
+
+    // 4. Unified savings summary
+    try {
+      response.savingsSummary = buildSavingsSummary(
+        report.totalBilled,
+        report.totalCmsBaseline,
+        (response.billingErrors as any[]) || [],
+        (response.siteOfService as any[]) || [],
+        (response.balanceBilling as any[]) || [],
+      );
+    } catch (err) {
+      console.error('[server] Savings summary failed:', err);
     }
 
     sendJson(res, 200, response);

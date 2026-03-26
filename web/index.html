@@ -654,6 +654,199 @@
     .pill-green { background: var(--green-bg); color: var(--green); }
     .pill-gray  { background: var(--surface2); color: var(--text-muted); }
 
+    /* ─── How It Works page ──────────────────────────────────────── */
+    .hiw-hero {
+      text-align: center;
+      padding: 64px 0 40px;
+    }
+    .hiw-hero .hero-subtitle {
+      margin: 16px auto 0;
+    }
+    .hiw-section {
+      padding: 40px 0;
+    }
+    .hiw-section h2 {
+      margin-bottom: 24px;
+    }
+    .hiw-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .hiw-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s;
+    }
+    .hiw-card:hover {
+      border-color: var(--border2);
+    }
+    .hiw-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .hiw-card-icon.green  { background: var(--green-bg); color: var(--green); }
+    .hiw-card-icon.red    { background: var(--red-bg);   color: var(--red); }
+    .hiw-card-icon.blue   { background: var(--blue-bg);  color: var(--blue); }
+    .hiw-card-icon.yellow { background: var(--yellow-bg); color: var(--yellow); }
+    .hiw-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .hiw-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+    .hiw-steps-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      position: relative;
+      padding-left: 40px;
+    }
+    .hiw-step {
+      position: relative;
+      padding: 0 0 32px 20px;
+      border-left: 2px solid var(--border2);
+    }
+    .hiw-step:last-child {
+      border-left-color: transparent;
+      padding-bottom: 0;
+    }
+    .hiw-step-num {
+      position: absolute;
+      left: -41px;
+      top: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--green-dim);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--green);
+    }
+    .hiw-step h3 {
+      margin-bottom: 4px;
+    }
+    .hiw-step p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .hiw-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .hiw-comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+    .hiw-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .hiw-col h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hiw-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .hiw-col li {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding-left: 20px;
+      position: relative;
+    }
+    .hiw-col li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+    .hiw-rights {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .hiw-right {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .hiw-right h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .hiw-right p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .hiw-trust-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .hiw-trust-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+    .hiw-trust-item .hiw-trust-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .hiw-trust-item .hiw-trust-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .hiw-cta {
+      text-align: center;
+      padding: 48px 0 64px;
+    }
+    .hiw-cta p {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
     /* ─── Transition for pages ───────────────────────────────────── */
     .page { animation: fadeIn 0.15s ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -812,6 +1005,7 @@
   <div class="nav-links" id="navLinks">
     <a href="#/" class="nav-link active" data-page="home">Home</a>
     <a href="#/audit" class="nav-link" data-page="audit">Audit Bill</a>
+    <a href="#/how-it-works" class="nav-link" data-page="how-it-works">How It Works</a>
     <a href="#/stats" class="nav-link" data-page="stats">Stats</a>
   </div>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
@@ -823,6 +1017,7 @@
 <div class="nav-drawer" id="navDrawer" role="menu">
   <a href="#/" class="nav-link" data-page="home" role="menuitem">Home</a>
   <a href="#/audit" class="nav-link" data-page="audit" role="menuitem">Audit a Bill</a>
+  <a href="#/how-it-works" class="nav-link" data-page="how-it-works" role="menuitem">How It Works</a>
   <a href="#/stats" class="nav-link" data-page="stats" role="menuitem">Stats</a>
 </div>
 
@@ -1040,6 +1235,220 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- HOW IT WORKS PAGE                                                       -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-how-it-works">
+  <div class="container">
+
+    <!-- Hero -->
+    <section class="hiw-hero">
+      <h1 class="hero-title">How BillScan <span style="color:var(--accent)">Saves You Money</span></h1>
+      <p class="hero-subtitle">Whether you have insurance or not, your medical bills may contain errors and overcharges. Here’s how we find them.</p>
+    </section>
+
+    <!-- Section 1: What We Check -->
+    <section class="hiw-section">
+      <h2>What We Check</h2>
+      <div class="hiw-cards">
+
+        <div class="hiw-card">
+          <div class="hiw-card-icon green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><path d="M2 6h6M16 6h6M2 18h6M16 18h6"/></svg>
+          </div>
+          <h3>Rate Comparison</h3>
+          <p>We compare every charge on your bill against official CMS Medicare rates — the government’s benchmark for what healthcare should cost.</p>
+        </div>
+
+        <div class="hiw-card">
+          <div class="hiw-card-icon red">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <h3>Billing Errors</h3>
+          <p>We scan for upcoding (billing for a more expensive procedure than performed), unbundled charges (splitting procedures that should be billed together), and duplicate charges.</p>
+        </div>
+
+        <div class="hiw-card">
+          <div class="hiw-card-icon blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <h3>Site-of-Service Savings</h3>
+          <p>Many services cost 2–4× more at a hospital outpatient department than at a doctor’s office. We show you where you could save by choosing a different setting.</p>
+        </div>
+
+        <div class="hiw-card">
+          <div class="hiw-card-icon yellow">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <h3>Balance Billing Protection</h3>
+          <p>If you have an EOB, we check whether your provider is charging you more than your insurance says you owe — which may be illegal under the No Surprises Act.</p>
+        </div>
+
+        <div class="hiw-card">
+          <div class="hiw-card-icon green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <h3>Insurance Appeal Support</h3>
+          <p>We generate evidence-backed appeal documents with CMS rate data and legal references you can use to fight denials or overcharges.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 2: How to Use It -->
+    <section class="hiw-section">
+      <h2>How to Use It</h2>
+      <div class="hiw-steps-list">
+
+        <div class="hiw-step">
+          <div class="hiw-step-num">1</div>
+          <h3>Take a photo of your medical bill or EOB</h3>
+          <p>Grab your itemized medical bill or Explanation of Benefits (EOB) from your insurer. A photo, PDF, or scanned copy all work.</p>
+        </div>
+
+        <div class="hiw-step">
+          <div class="hiw-step-num">2</div>
+          <h3>Upload it to BillScan</h3>
+          <p>Drop your file on the <a href="#/audit">Audit page</a>. We accept images (JPG/PNG), PDFs, and structured JSON.</p>
+        </div>
+
+        <div class="hiw-step">
+          <div class="hiw-step-num">3</div>
+          <h3>Enter your ZIP code</h3>
+          <p>CMS rates vary by geographic area. Your ZIP code helps us find the most accurate local Medicare rates for your region.</p>
+        </div>
+
+        <div class="hiw-step">
+          <div class="hiw-step-num">4</div>
+          <h3>Review your savings report</h3>
+          <p>We show exactly where you’re being overcharged — line by line, with the CMS benchmark rate, the markup multiplier, and a severity rating for each charge.</p>
+        </div>
+
+        <div class="hiw-step">
+          <div class="hiw-step-num">5</div>
+          <h3>Use our generated documents to negotiate or appeal</h3>
+          <p>Download a dispute letter, phone script, or insurance appeal evidence packet. Each document includes specific CPT codes, CMS rates, and legal references.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 3: Savings by Situation -->
+    <section class="hiw-section">
+      <h2>Your Savings by Situation</h2>
+      <div class="hiw-comparison">
+
+        <div class="hiw-col">
+          <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            If You’re Uninsured
+          </h3>
+          <ul>
+            <li>Use the Medicare rate as your negotiation benchmark</li>
+            <li>Hospitals routinely accept Medicare + 20% from self-pay patients</li>
+            <li>Typical savings: 30–60% off the billed amount</li>
+            <li>Ask for prompt-pay discounts (additional 20–40% off)</li>
+            <li>Check if you qualify for charity care / financial assistance</li>
+          </ul>
+        </div>
+
+        <div class="hiw-col">
+          <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            If You Have Insurance
+          </h3>
+          <ul>
+            <li>Check your bill for coding errors (saves money for everyone)</li>
+            <li>Compare site-of-service rates — choose lower-cost settings for future care</li>
+            <li>Verify your provider isn’t balance billing you beyond your EOB responsibility</li>
+            <li>Appeal denied claims using our CMS rate evidence</li>
+            <li>Negotiate your deductible/coinsurance portion using our data</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 4: Your Rights -->
+    <section class="hiw-section">
+      <h2>Your Rights</h2>
+      <div class="hiw-rights">
+
+        <div class="hiw-right">
+          <h3>🛡️ No Surprises Act (2022)</h3>
+          <p>Protects against surprise bills from out-of-network providers at in-network facilities and for emergency services. You can only be charged in-network cost-sharing amounts in these situations.</p>
+        </div>
+
+        <div class="hiw-right">
+          <h3>🏥 Hospital Price Transparency (2021/2026)</h3>
+          <p>Hospitals must publish machine-readable files with their standard charges — including gross charges, discounted cash prices, and payer-specific negotiated rates. You have the right to see these prices before receiving care.</p>
+        </div>
+
+        <div class="hiw-right">
+          <h3>📝 Good Faith Estimates</h3>
+          <p>Uninsured or self-pay patients can request a written cost estimate before scheduled services. If the final bill exceeds the estimate by $400 or more, you can dispute it through a federal process.</p>
+        </div>
+
+        <div class="hiw-right">
+          <h3>⚖️ Appeal Rights</h3>
+          <p>You can appeal any insurance claim denial — first through an internal review with your insurer, then through an external review by an independent organization. Your insurer must tell you how to appeal in every denial letter.</p>
+        </div>
+
+        <div class="hiw-right">
+          <h3>💬 Dispute Rights</h3>
+          <p>If your bill exceeds a Good Faith Estimate by $400 or more, you can initiate the patient-provider dispute resolution process. A third-party arbiter will review your case and determine a fair payment amount.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 5: Powered by Real Data -->
+    <section class="hiw-section">
+      <h2>Powered by Real Data</h2>
+      <div class="hiw-trust-grid">
+
+        <div class="hiw-trust-item">
+          <div class="hiw-trust-value">1M+</div>
+          <div class="hiw-trust-label">CMS rate entries from official fee schedules</div>
+        </div>
+
+        <div class="hiw-trust-item">
+          <div class="hiw-trust-value">4</div>
+          <div class="hiw-trust-label">Data sources: PFS, CLFS, ASP Drug Pricing, Hospital OPPS</div>
+        </div>
+
+        <div class="hiw-trust-item">
+          <div class="hiw-trust-value">2026</div>
+          <div class="hiw-trust-label">Updated rates — same data Medicare uses to pay providers</div>
+        </div>
+
+        <div class="hiw-trust-item">
+          <div class="hiw-trust-value">100%</div>
+          <div class="hiw-trust-label">Real CMS.gov data — no fake data, no estimates</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="hiw-cta">
+      <p>Ready to check your bill?</p>
+      <a href="#/audit" class="btn btn-primary btn-lg">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 1v16M1 9h16" opacity=".4"/><rect x="3" y="3" width="12" height="12" rx="2"/><path d="M6 9h6M6 6h4M6 12h3"/></svg>
+        Audit Your Bill
+      </a>
+    </section>
+
+  </div>
+
+  <footer>
+    <div class="container">
+      BillScan is a transparency tool, not legal or medical advice.
+      All rates from official <a href="https://www.cms.gov" target="_blank" rel="noopener">CMS.gov</a> data.
+    </div>
+  </footer>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
 <!-- STATS PAGE                                                              -->
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-stats">
@@ -1065,9 +1474,10 @@ const API = ''; // same origin
 
 // ── Router ───────────────────────────────────────────────────────────────────
 const pages = {
-  '/'      : 'home',
-  '/audit' : 'audit',
-  '/stats' : 'stats',
+  '/'              : 'home',
+  '/audit'         : 'audit',
+  '/how-it-works'  : 'how-it-works',
+  '/stats'         : 'stats',
 };
 
 function getRoute() {
