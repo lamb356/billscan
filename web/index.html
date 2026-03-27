@@ -5285,7 +5285,7 @@ document.getElementById('deleteAllDataBtn')?.addEventListener('click', async () 
   if (nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
 })();
 
-// ── Auth state (session-only — not persisted to localStorage) ─────────────────
+// ── Auth state (session-only — session-only, not persisted) ─────────────────
 let authToken = null;
 let authUser = null;
 let authMode = 'login'; // 'login' or 'signup'
