@@ -208,6 +208,50 @@ export async function runMigrations(): Promise<void> {
     { sql: `CREATE INDEX IF NOT EXISTS idx_audits_user ON audits(user_id)`, args: [] },
   ]);
 
+  // Auth migration: add password_hash, audits_this_month, month_reset, last_login to users
+  const userAlterColumns = [
+    { col: 'password_hash', def: "TEXT DEFAULT ''" },
+    { col: 'audits_this_month', def: 'INTEGER DEFAULT 0' },
+    { col: 'month_reset', def: 'TEXT' },
+    { col: 'last_login', def: 'TEXT' },
+  ];
+  for (const { col, def } of userAlterColumns) {
+    try {
+      await db.execute({ sql: `ALTER TABLE users ADD COLUMN ${col} ${def}`, args: [] });
+    } catch {
+      // Column already exists — safe to ignore
+    }
+  }
+
+  // Password reset tokens table
+  await db.batch([
+    {
+      sql: `CREATE TABLE IF NOT EXISTS password_resets (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id         INTEGER NOT NULL,
+        token_hash      TEXT NOT NULL,
+        expires_at      TEXT NOT NULL,
+        used            INTEGER DEFAULT 0,
+        created_at      TEXT DEFAULT (datetime('now'))
+      )`, args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id)`, args: [] },
+  ]);
+
+  // Analytics events table (privacy-friendly, self-hosted)
+  await db.batch([
+    {
+      sql: `CREATE TABLE IF NOT EXISTS analytics_events (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type      TEXT NOT NULL,
+        event_data      TEXT,
+        created_at      TEXT DEFAULT (datetime('now'))
+      )`, args: []
+    },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_analytics_type ON analytics_events(event_type)`, args: [] },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at)`, args: [] },
+  ]);
+
   // Community-contributed price data
   await db.batch([
     {

@@ -172,3 +172,32 @@ export function findHospitalMRF(
 export function listHospitalMRFs(): HospitalMrfEntry[] {
   return loadMrfData();
 }
+
+/**
+ * Auto-fetch hospital prices by name.
+ * Finds the best-matching MRF URL and attempts to download + parse it.
+ * Returns the MRF URL and metadata if a match is found (actual parsing
+ * happens via the hospital-price-parser + hospital-price-importer pipeline).
+ */
+export async function autoFetchHospitalPrices(
+  hospitalName: string,
+  options?: { state?: string },
+): Promise<{ found: boolean; mrfUrl?: string; hospitalName?: string; score?: number } | null> {
+  const matches = findHospitalMRF(hospitalName, {
+    state: options?.state,
+    threshold: 0.4,
+    limit: 1,
+  });
+
+  if (matches.length === 0) {
+    return { found: false };
+  }
+
+  const best = matches[0];
+  return {
+    found: true,
+    mrfUrl: best.mrfUrl,
+    hospitalName: best.hospitalName,
+    score: best.score,
+  };
+}

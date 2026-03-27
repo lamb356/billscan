@@ -4,6 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta name="description" content="BillScan — Audit your medical bill against 1M+ Medicare rates and find overcharges instantly.">
+  <link rel="canonical" href="https://billscan.app/">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://billscan.app/">
+  <meta property="og:title" content="BillScan — Medical Bill Auditor">
+  <meta property="og:description" content="Audit your medical bill against 1M+ Medicare rates. Find overcharges, generate appeal letters, and save money on healthcare.">
+  <meta property="og:site_name" content="BillScan">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="BillScan — Medical Bill Auditor">
+  <meta name="twitter:description" content="Audit your medical bill against 1M+ Medicare rates. Find overcharges, generate appeal letters, and save money on healthcare.">
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "BillScan",
+    "description": "Audit your medical bill against 1M+ Medicare rates and find overcharges instantly.",
+    "url": "https://billscan.app",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free tier: 2 audits per month"
+    }
+  }
+  </script>
   <title>BillScan — Medical Bill Auditor</title>
   <style>
     /* ─── Design Tokens ─────────────────────────────────────────── */
@@ -1795,6 +1824,215 @@
     .mrf-match-score.high { background: rgba(63,185,80,0.15); color: var(--accent); }
     .mrf-match-score.med { background: rgba(210,153,34,0.15); color: var(--warning); }
     .mrf-match-score.low { background: rgba(139,148,158,0.15); color: var(--text-muted); }
+
+    /* ─── Auth UI ──────────────────────────────────────────────── */
+    .nav-auth { margin-left: auto; }
+    .btn-signin {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background .15s;
+    }
+    .btn-signin:hover { background: rgba(63,185,80,0.1); }
+    .nav-user { margin-left: auto; position: relative; }
+    .nav-user-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-user-btn:hover { border-color: var(--accent); }
+    .plan-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .plan-badge.free { background: var(--border); color: var(--text-muted); }
+    .plan-badge.premium { background: rgba(210,153,34,0.2); color: var(--warning); }
+    .nav-user-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 200px;
+      z-index: 1000;
+      overflow: hidden;
+    }
+    .nav-user-dropdown.open { display: block; }
+    .dropdown-header {
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .dropdown-item {
+      display: block;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .dropdown-item:hover { background: rgba(63,185,80,0.05); }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      position: relative;
+      width: 100%;
+    }
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .paywall-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    .paywall-feature {
+      background: rgba(63,185,80,0.08);
+      border: 1px solid rgba(63,185,80,0.2);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .pro-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(210,153,34,0.2);
+      color: var(--warning);
+      vertical-align: super;
+      margin-left: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── Legal Pages ──────────────────────────────────────────────── */
+    .legal-page { max-width: 800px; margin: 0 auto; }
+    .legal-page h1 { font-size: 28px; margin-bottom: 8px; }
+    .legal-page .legal-updated { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; }
+    .legal-page h2 { font-size: 20px; margin-top: 32px; margin-bottom: 12px; color: var(--text-primary); }
+    .legal-page h3 { font-size: 16px; margin-top: 20px; margin-bottom: 8px; color: var(--text-secondary); }
+    .legal-page p, .legal-page li { color: var(--text-secondary); line-height: 1.7; font-size: 14px; }
+    .legal-page ul { padding-left: 20px; }
+    .legal-page a { color: var(--accent); }
+
+    /* ─── Site Footer ──────────────────────────────────────────────── */
+    .site-footer {
+      margin-top: 48px;
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .site-footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      margin: 0 10px;
+    }
+    .site-footer a:hover { color: var(--accent); }
+
+    /* ─── Admin Analytics Dashboard ────────────────────────────────── */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .admin-stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .admin-stat-card .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .admin-stat-card .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    .admin-table th, .admin-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .admin-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── Email Checkbox ───────────────────────────────────────────── */
+    .email-opt-in {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .email-opt-in input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -1818,6 +2056,22 @@
     <a href="#/get-records" class="nav-link" data-page="get-records">Get Records</a>
     <a href="#/history" class="nav-link" data-page="history">History</a>
     <a href="#/community" class="nav-link" data-page="community">Community</a>
+  </div>
+  <!-- Auth nav area -->
+  <div class="nav-auth" id="navAuth">
+    <button class="btn-signin" id="navSignInBtn" onclick="showAuthModal()">Sign In</button>
+  </div>
+  <div class="nav-user" id="navUser" style="display:none">
+    <button class="nav-user-btn" id="navUserBtn">
+      <span id="navUserEmail"></span>
+      <span class="plan-badge" id="navPlanBadge">FREE</span>
+    </button>
+    <div class="nav-user-dropdown" id="navUserDropdown">
+      <div class="dropdown-header" id="dropdownEmail"></div>
+      <a class="dropdown-item" id="dropdownUpgrade" onclick="startUpgrade()">Upgrade to Premium</a>
+      <a class="dropdown-item" id="dropdownManage" onclick="openStripePortal()" style="display:none">Manage Subscription</a>
+      <a class="dropdown-item" onclick="logout()">Logout</a>
+    </div>
   </div>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
     <svg id="hamburgerIcon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -1907,6 +2161,11 @@
     <div class="container">
       BillScan is a transparency tool, not legal or medical advice.
       All rates from official <a href="https://www.cms.gov" target="_blank" rel="noopener">CMS.gov</a> data.
+      <div class="site-footer">
+        <a href="#/privacy">Privacy Policy</a>
+        <a href="#/terms">Terms of Service</a>
+        <span>&copy; 2026 BillScan</span>
+      </div>
     </div>
   </footer>
 </div>
@@ -1973,6 +2232,10 @@
             <input type="checkbox" id="bulkUploadCheck">
             <span>Upload multiple bills (bulk mode)</span>
           </label>
+        </div>
+        <div class="email-opt-in" id="emailOptInRow" style="display:none">
+          <input type="checkbox" id="emailResultsCheck">
+          <span>Email me my results</span>
         </div>
         <hr class="divider">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -2088,6 +2351,11 @@
     <!-- Bulk results -->
     <div id="bulkResults" style="display:none;margin-top:24px"></div>
 
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
+    </div>
   </div>
 </div>
 
@@ -2301,6 +2569,11 @@
     <div class="container">
       BillScan is a transparency tool, not legal or medical advice.
       All rates from official <a href="https://www.cms.gov" target="_blank" rel="noopener">CMS.gov</a> data.
+      <div class="site-footer">
+        <a href="#/privacy">Privacy Policy</a>
+        <a href="#/terms">Terms of Service</a>
+        <span>&copy; 2026 BillScan</span>
+      </div>
     </div>
   </footer>
 </div>
@@ -2318,6 +2591,11 @@
         <div class="spinner"></div>
         <div class="loading-msg">Loading stats…</div>
       </div>
+    </div>
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
     </div>
   </div>
 </div>
@@ -2617,6 +2895,11 @@ Date of Birth: [DOB]</div>
     <div class="container">
       BillScan is a transparency tool, not legal or medical advice.
       All rates from official <a href="https://www.cms.gov" target="_blank" rel="noopener">CMS.gov</a> data.
+      <div class="site-footer">
+        <a href="#/privacy">Privacy Policy</a>
+        <a href="#/terms">Terms of Service</a>
+        <span>&copy; 2026 BillScan</span>
+      </div>
     </div>
   </footer>
 </div>
@@ -2659,6 +2942,11 @@ Date of Birth: [DOB]</div>
     <div id="historyDetail" style="display:none;margin-top:24px">
       <button class="btn" id="historyBackBtn" style="margin-bottom:16px">← Back to list</button>
       <div id="historyDetailContent"></div>
+    </div>
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
     </div>
   </div>
 </div>
@@ -2786,6 +3074,281 @@ Date of Birth: [DOB]</div>
       </div>
     </div>
 
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- PRIVACY POLICY                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-privacy">
+  <div class="container legal-page">
+    <h1>Privacy Policy</h1>
+    <p class="legal-updated">Last updated: March 27, 2026</p>
+
+    <h2>1. Overview</h2>
+    <p>BillScan ("we", "our", "the Service") is a medical bill transparency tool. We are committed to protecting your privacy and operate on a <strong>zero-storage</strong> policy for medical data.</p>
+
+    <h2>2. What We Do NOT Store</h2>
+    <ul>
+      <li>Your medical bills, EOBs, or health records</li>
+      <li>Your insurance details or plan information</li>
+      <li>Audit results or reports (returned to your browser only)</li>
+      <li>Uploaded files (deleted immediately after processing)</li>
+    </ul>
+
+    <h2>3. What We Do Store</h2>
+    <ul>
+      <li><strong>Account information:</strong> Email address and hashed password (BLAKE3 hash — we never store your actual password)</li>
+      <li><strong>Subscription status:</strong> Your plan type and Stripe customer ID for billing</li>
+      <li><strong>Anonymous analytics:</strong> Page views, feature usage counts, and aggregate audit statistics. No personally identifiable information is tracked.</li>
+      <li><strong>Public data:</strong> CMS Medicare rates, hospital price transparency data, and community-submitted anonymous price reports</li>
+    </ul>
+
+    <h2>4. Data Processing</h2>
+    <p>When you upload a medical bill:</p>
+    <ul>
+      <li>The file is processed entirely in server memory</li>
+      <li>A BLAKE3 hash is computed for integrity verification</li>
+      <li>The file is compared against CMS Medicare rates</li>
+      <li>Results are returned directly to your browser</li>
+      <li>The uploaded file and all temporary data are immediately deleted</li>
+    </ul>
+
+    <h2>5. Password Security</h2>
+    <p>Passwords are hashed using BLAKE3 with random salts via the <code>@noble/hashes</code> library (audited, zero-dependency). We never store or have access to your plaintext password.</p>
+
+    <h2>6. Payment Processing</h2>
+    <p>Payments are processed by Stripe. We do not store credit card numbers or payment details. Stripe's privacy policy applies to payment data.</p>
+
+    <h2>7. Analytics</h2>
+    <p>We use self-hosted, privacy-friendly analytics. No third-party tracking services (no Google Analytics, no Facebook Pixel). We track only aggregate data: page view counts, feature usage counts, and audit statistics. No cookies are used for tracking.</p>
+
+    <h2>8. Third-Party Services</h2>
+    <ul>
+      <li><strong>Stripe:</strong> Payment processing only</li>
+      <li><strong>Turso/libSQL:</strong> Database hosting (stores only account and public data)</li>
+    </ul>
+    <p>We do not sell, share, or transfer your personal information to any other third parties.</p>
+
+    <h2>9. Data Deletion</h2>
+    <p>You can delete your account and all associated data at any time from your account settings. Medical bill data is never stored, so there is nothing to delete.</p>
+
+    <h2>10. Contact</h2>
+    <p>For privacy questions or data requests, email <a href="mailto:privacy@billscan.app">privacy@billscan.app</a>.</p>
+
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TERMS OF SERVICE                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-terms">
+  <div class="container legal-page">
+    <h1>Terms of Service</h1>
+    <p class="legal-updated">Last updated: March 27, 2026</p>
+
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using BillScan ("the Service"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+
+    <h2>2. Description of Service</h2>
+    <p>BillScan is a medical bill transparency tool that compares your medical charges against official CMS Medicare rates and hospital price transparency data. The Service provides estimates and analysis — it is <strong>not</strong> legal, medical, or financial advice.</p>
+
+    <h2>3. Not Medical or Legal Advice</h2>
+    <p>BillScan is a transparency tool only. The information provided:</p>
+    <ul>
+      <li>Is based on publicly available CMS Medicare rates and hospital data</li>
+      <li>May not reflect your specific insurance plan, deductible, or network status</li>
+      <li>Should not be used as a substitute for professional medical or legal counsel</li>
+      <li>Is provided "as is" without warranty of accuracy or completeness</li>
+    </ul>
+
+    <h2>4. User Accounts</h2>
+    <ul>
+      <li>You must provide a valid email address to create an account</li>
+      <li>You are responsible for maintaining the security of your password</li>
+      <li>You must be at least 18 years old to use the Service</li>
+      <li>One account per person — do not create multiple accounts</li>
+    </ul>
+
+    <h2>5. Free and Premium Plans</h2>
+    <ul>
+      <li><strong>Free plan:</strong> 2 bill audits per month, basic features</li>
+      <li><strong>Premium plan:</strong> $10.99/month, unlimited audits, appeal letters, dispute letters, phone scripts, PDF export, and bulk upload</li>
+      <li>Premium subscriptions are billed monthly via Stripe</li>
+      <li>You may cancel at any time from your account settings</li>
+      <li>Refunds are handled on a case-by-case basis</li>
+    </ul>
+
+    <h2>6. Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use the Service for any illegal purpose</li>
+      <li>Upload files containing malware or malicious code</li>
+      <li>Attempt to access other users' data or accounts</li>
+      <li>Abuse the API or attempt to circumvent rate limits</li>
+      <li>Scrape or bulk-download data from the Service</li>
+    </ul>
+
+    <h2>7. Data and Privacy</h2>
+    <p>Your use of the Service is also governed by our <a href="#/privacy">Privacy Policy</a>. Medical bills are processed in memory and never stored.</p>
+
+    <h2>8. Limitation of Liability</h2>
+    <p>BillScan is provided "as is" without warranty of any kind. We are not liable for any damages arising from your use of the Service, including but not limited to inaccurate savings estimates, failed disputes, or billing errors.</p>
+
+    <h2>9. Changes to Terms</h2>
+    <p>We may update these Terms at any time. Continued use of the Service constitutes acceptance of the updated Terms.</p>
+
+    <h2>10. Contact</h2>
+    <p>For questions about these Terms, email <a href="mailto:legal@billscan.app">legal@billscan.app</a>.</p>
+
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- ADMIN ANALYTICS DASHBOARD                                               -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-admin-analytics">
+  <div class="container">
+    <h1 style="margin-bottom:24px">Analytics Dashboard</h1>
+    <div id="adminAuthGate" style="text-align:center;padding:40px;color:var(--text-muted)">
+      <p>Admin access required. Please sign in with an admin account.</p>
+    </div>
+    <div id="adminDashboard" style="display:none">
+      <div class="admin-grid" id="adminStatCards">
+        <div class="admin-stat-card">
+          <div class="stat-value" id="adminTotalAudits">—</div>
+          <div class="stat-label">Total Audits</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="stat-value" id="adminAudits7d">—</div>
+          <div class="stat-label">Audits (7 days)</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="stat-value" id="adminAvgSavings">—</div>
+          <div class="stat-label">Avg Savings</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="stat-value" id="adminSignups">—</div>
+          <div class="stat-label">Signups</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="stat-value" id="adminUpgrades">—</div>
+          <div class="stat-label">Upgrades</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="stat-value" id="adminAvgBill">—</div>
+          <div class="stat-label">Avg Bill Size</div>
+        </div>
+      </div>
+
+      <h2 style="margin-top:32px">Page Views (Last 7 Days)</h2>
+      <table class="admin-table" id="adminPageViews7d">
+        <thead><tr><th>Page</th><th>Views</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <h2 style="margin-top:32px">Feature Usage (Last 30 Days)</h2>
+      <table class="admin-table" id="adminFeatureUsage">
+        <thead><tr><th>Feature</th><th>Uses</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <h2 style="margin-top:32px">Daily Audit Trend (Last 30 Days)</h2>
+      <table class="admin-table" id="adminDailyTrend">
+        <thead><tr><th>Date</th><th>Audits</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="site-footer">
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
+      <span>&copy; 2026 BillScan</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- AUTH MODAL                                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="authModal" style="display:none">
+  <div class="modal-content" style="max-width:400px">
+    <button class="modal-close" onclick="hideAuthModal()">&times;</button>
+    <h2 id="authModalTitle" style="margin-bottom:20px;text-align:center">Sign In</h2>
+    <form id="authForm">
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Email</label>
+        <input type="email" id="authEmail" class="input" placeholder="you@example.com" required style="width:100%;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Password</label>
+        <input type="password" id="authPassword" class="input" placeholder="Min 8 characters" required minlength="8" style="width:100%;box-sizing:border-box">
+      </div>
+      <div id="authError" style="display:none;color:var(--danger);font-size:13px;margin-bottom:12px;padding:8px;background:rgba(248,81,73,0.1);border-radius:6px"></div>
+      <button type="submit" class="btn" id="authSubmitBtn" style="width:100%;padding:12px;font-size:15px">Sign In</button>
+    </form>
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">
+      <span id="authToggleMsg">Don't have an account?</span>
+      <a href="#" id="authToggleLink" onclick="toggleAuthMode(event)" style="color:var(--accent);margin-left:4px">Sign Up</a>
+    </div>
+    <div style="text-align:center;margin-top:8px">
+      <a href="#" id="authForgotLink" onclick="showForgotPassword(event)" style="font-size:12px;color:var(--text-muted)">Forgot password?</a>
+    </div>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotModal" style="display:none">
+  <div class="modal-content" style="max-width:400px">
+    <button class="modal-close" onclick="document.getElementById('forgotModal').style.display='none'">&times;</button>
+    <h2 style="margin-bottom:20px;text-align:center">Reset Password</h2>
+    <form id="forgotForm">
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px">Email</label>
+        <input type="email" id="forgotEmail" class="input" placeholder="you@example.com" required style="width:100%;box-sizing:border-box">
+      </div>
+      <div id="forgotResult" style="display:none;font-size:13px;margin-bottom:12px;padding:8px;border-radius:6px"></div>
+      <button type="submit" class="btn" style="width:100%;padding:12px">Send Reset Link</button>
+    </form>
+  </div>
+</div>
+
+<!-- PAYWALL MODAL -->
+<div class="modal-overlay" id="paywallModal" style="display:none">
+  <div class="modal-content" style="max-width:460px;text-align:center">
+    <button class="modal-close" onclick="document.getElementById('paywallModal').style.display='none'">&times;</button>
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <h2 id="paywallTitle" style="margin-bottom:8px">Free Limit Reached</h2>
+    <p id="paywallMsg" style="color:var(--text-muted);margin-bottom:24px">You've used your 2 free audits this month. Upgrade to Premium for unlimited audits and all features.</p>
+    <div class="paywall-features">
+      <div class="paywall-feature">Unlimited audits</div>
+      <div class="paywall-feature">Appeal letters</div>
+      <div class="paywall-feature">Dispute letters</div>
+      <div class="paywall-feature">Phone scripts</div>
+      <div class="paywall-feature">PDF export</div>
+      <div class="paywall-feature">Bulk upload</div>
+    </div>
+    <div style="font-size:32px;font-weight:700;color:var(--accent);margin:20px 0 4px">$10.99<span style="font-size:16px;font-weight:400;color:var(--text-muted)">/mo</span></div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Cancel anytime</p>
+    <button class="btn" id="paywallUpgradeBtn" onclick="startUpgrade()" style="width:100%;padding:14px;font-size:16px;font-weight:600">Upgrade to Premium</button>
+    <p id="paywallSignupMsg" style="font-size:13px;color:var(--text-muted);margin-top:12px;display:none">
+      <a href="#" onclick="showAuthModal();document.getElementById('paywallModal').style.display='none';return false" style="color:var(--accent)">Sign in or create an account</a> first to upgrade.
+    </p>
   </div>
 </div>
 
@@ -2808,13 +3371,16 @@ function filterSOLTable() {
 
 // ── Router ───────────────────────────────────────────────────────────────────
 const pages = {
-  '/'              : 'home',
-  '/audit'         : 'audit',
-  '/how-it-works'  : 'how-it-works',
-  '/stats'         : 'stats',
-  '/get-records'   : 'get-records',
-  '/history'       : 'history',
-  '/community'     : 'community',
+  '/'                : 'home',
+  '/audit'           : 'audit',
+  '/how-it-works'    : 'how-it-works',
+  '/stats'           : 'stats',
+  '/get-records'     : 'get-records',
+  '/history'         : 'history',
+  '/community'       : 'community',
+  '/privacy'         : 'privacy',
+  '/terms'           : 'terms',
+  '/admin-analytics' : 'admin-analytics',
 };
 
 function getRoute() {
@@ -2840,6 +3406,10 @@ function navigate(route) {
   if (pageName === 'stats') loadStats();
   if (pageName === 'home') loadHomeSources();
   if (pageName === 'history') loadHistory();
+  if (pageName === 'admin-analytics') loadAdminDashboard();
+
+  // Track page view (analytics)
+  trackEvent('page_view', { page: pageName });
 }
 
 window.addEventListener('hashchange', () => navigate(getRoute()));
@@ -3167,10 +3737,19 @@ async function runAudit() {
     const formData = new FormData();
     formData.append('file', selectedFile);
 
-    const res = await fetch(url, { method: 'POST', body: formData });
+    const fetchOpts = { method: 'POST', body: formData, headers: {} };
+    if (authToken) fetchOpts.headers['Authorization'] = 'Bearer ' + authToken;
+
+    const res = await fetch(url, fetchOpts);
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      if (err.paywalled) {
+        loading.style.display = 'none';
+        auditBtn.disabled = false;
+        showPaywallModal(err.error);
+        return;
+      }
       throw new Error(err.error || 'Audit failed');
     }
 
@@ -3192,6 +3771,11 @@ async function runAudit() {
 }
 
 async function runBulkAudit() {
+  // Premium feature gate
+  if (!authToken || !authUser || authUser.plan !== 'premium') {
+    showPaywallModal('Bulk upload is a Premium feature.');
+    return;
+  }
   const loading = document.getElementById('auditLoading');
   const results = document.getElementById('auditResults');
   const connErr = document.getElementById('connError');
@@ -3892,31 +4476,35 @@ function renderActionButtons(report) {
   const el = document.getElementById('actionButtonsSection');
   el.style.display = 'block';
 
+  const isPremium = report.premium || (authToken && authUser && authUser.plan === 'premium');
+  const proTag = isPremium ? '' : '<span class="pro-badge">PRO</span>';
+
   el.innerHTML = `
     <div class="action-buttons-row">
       <button class="btn btn-appeal" id="downloadAppealBtn">
-        📄 Download Appeal Letter
+        Download Appeal Letter${proTag}
       </button>
       <button class="btn btn-dispute" id="downloadDisputeBtn">
-        📝 Download Dispute Letter
+        Download Dispute Letter${proTag}
       </button>
       <button class="btn btn-phone" id="downloadPhoneScriptBtn">
-        📞 Download Phone Script
+        Download Phone Script${proTag}
       </button>
       <button class="btn btn-pdf" id="downloadPdfBtn">
-        📄 Download PDF Report
+        Download PDF Report${proTag}
       </button>
     </div>
   `;
 
   document.getElementById('downloadAppealBtn').addEventListener('click', async () => {
+    if (!isPremium) { showPaywallModal('Appeal letters are a Premium feature.'); return; }
     const btn = document.getElementById('downloadAppealBtn');
     btn.disabled = true;
     btn.textContent = 'Generating…';
     try {
       const res = await fetch(API + '/api/appeal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           findings: report.findings || [],
           eobData: report.eobData || undefined,
@@ -3945,6 +4533,7 @@ function renderActionButtons(report) {
   });
 
   document.getElementById('downloadPhoneScriptBtn').addEventListener('click', () => {
+    if (!isPremium) { showPaywallModal('Phone scripts are a Premium feature.'); return; }
     const findings = report.findings || [];
     const totalBilled = report.totalBilled || 0;
     const totalCms = report.totalCmsBaseline || 0;
@@ -4032,13 +4621,14 @@ Generated by BillScan — billscan.app
 
   // ── Dispute Letter ──────────────────────────────────────────────────────────
   document.getElementById('downloadDisputeBtn').addEventListener('click', async () => {
+    if (!isPremium) { showPaywallModal('Dispute letters are a Premium feature.'); return; }
     const btn = document.getElementById('downloadDisputeBtn');
     btn.disabled = true;
     btn.textContent = 'Generating…';
     try {
       const res = await fetch(API + '/api/dispute-letter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ report })
       });
       if (!res.ok) throw new Error('Dispute letter generation failed');
@@ -4061,6 +4651,7 @@ Generated by BillScan — billscan.app
 
   // ── PDF Export ──────────────────────────────────────────────────────────────
   document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+    if (!isPremium) { showPaywallModal('PDF export is a Premium feature.'); return; }
     generatePdfReport(report);
   });
 }
@@ -4693,6 +5284,310 @@ document.getElementById('deleteAllDataBtn')?.addEventListener('click', async () 
   const nav = document.querySelector('.navbar');
   if (nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
 })();
+
+// ── Auth state (session-only — not persisted to localStorage) ─────────────────
+let authToken = null;
+let authUser = null;
+let authMode = 'login'; // 'login' or 'signup'
+
+function authHeaders() {
+  if (!authToken) return {};
+  return { 'Authorization': 'Bearer ' + authToken };
+}
+
+function updateAuthUI() {
+  const authEl = document.getElementById('navAuth');
+  const userEl = document.getElementById('navUser');
+  const emailSpan = document.getElementById('navUserEmail');
+  const badge = document.getElementById('navPlanBadge');
+  const dropdownEmail = document.getElementById('dropdownEmail');
+  const upgradeItem = document.getElementById('dropdownUpgrade');
+  const manageItem = document.getElementById('dropdownManage');
+
+  if (authToken && authUser) {
+    authEl.style.display = 'none';
+    userEl.style.display = 'block';
+    emailSpan.textContent = authUser.email;
+    dropdownEmail.textContent = authUser.email;
+
+    if (authUser.plan === 'premium') {
+      badge.textContent = 'PRO';
+      badge.className = 'plan-badge premium';
+      upgradeItem.style.display = 'none';
+      manageItem.style.display = authUser.hasStripe ? 'block' : 'none';
+    } else {
+      badge.textContent = 'FREE';
+      badge.className = 'plan-badge free';
+      upgradeItem.style.display = 'block';
+      manageItem.style.display = 'none';
+    }
+  } else {
+    authEl.style.display = 'block';
+    userEl.style.display = 'none';
+  }
+  // Update email opt-in visibility
+  if (typeof updateEmailOptIn === 'function') updateEmailOptIn();
+}
+
+// User dropdown toggle
+document.getElementById('navUserBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('navUserDropdown').classList.toggle('open');
+});
+document.addEventListener('click', () => {
+  document.getElementById('navUserDropdown')?.classList.remove('open');
+});
+
+function showAuthModal() {
+  document.getElementById('authModal').style.display = 'flex';
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  setAuthMode('login');
+}
+
+function hideAuthModal() {
+  document.getElementById('authModal').style.display = 'none';
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const title = document.getElementById('authModalTitle');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  const toggleMsg = document.getElementById('authToggleMsg');
+  const toggleLink = document.getElementById('authToggleLink');
+  if (mode === 'signup') {
+    title.textContent = 'Create Account';
+    submitBtn.textContent = 'Sign Up';
+    toggleMsg.textContent = 'Already have an account?';
+    toggleLink.textContent = 'Sign In';
+  } else {
+    title.textContent = 'Sign In';
+    submitBtn.textContent = 'Sign In';
+    toggleMsg.textContent = "Don't have an account?";
+    toggleLink.textContent = 'Sign Up';
+  }
+}
+
+function toggleAuthMode(e) {
+  e.preventDefault();
+  setAuthMode(authMode === 'login' ? 'signup' : 'login');
+}
+
+document.getElementById('authForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('authError');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  errEl.style.display = 'none';
+  submitBtn.disabled = true;
+  submitBtn.textContent = authMode === 'login' ? 'Signing in…' : 'Creating account…';
+
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+
+  try {
+    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+    const res = await fetch(API + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Authentication failed');
+
+    authToken = data.token;
+    authUser = data.user;
+    hideAuthModal();
+    updateAuthUI();
+  } catch (err) {
+    errEl.style.display = 'block';
+    errEl.textContent = err.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = authMode === 'login' ? 'Sign In' : 'Sign Up';
+  }
+});
+
+function showForgotPassword(e) {
+  e.preventDefault();
+  hideAuthModal();
+  document.getElementById('forgotModal').style.display = 'flex';
+  document.getElementById('forgotEmail').value = '';
+  document.getElementById('forgotResult').style.display = 'none';
+}
+
+document.getElementById('forgotForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const resultEl = document.getElementById('forgotResult');
+  const email = document.getElementById('forgotEmail').value.trim();
+
+  try {
+    const res = await fetch(API + '/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    resultEl.style.display = 'block';
+    resultEl.style.color = 'var(--accent)';
+    resultEl.style.background = 'rgba(63,185,80,0.1)';
+    resultEl.textContent = 'If an account exists with that email, we sent a reset link.';
+  } catch (err) {
+    resultEl.style.display = 'block';
+    resultEl.style.color = 'var(--danger)';
+    resultEl.style.background = 'rgba(248,81,73,0.1)';
+    resultEl.textContent = 'Error: ' + err.message;
+  }
+});
+
+function logout() {
+  authToken = null;
+  authUser = null;
+  updateAuthUI();
+  document.getElementById('navUserDropdown')?.classList.remove('open');
+}
+
+function showPaywallModal(msg) {
+  const modal = document.getElementById('paywallModal');
+  if (msg) document.getElementById('paywallMsg').textContent = msg;
+  const signupMsg = document.getElementById('paywallSignupMsg');
+  signupMsg.style.display = authToken ? 'none' : 'block';
+  modal.style.display = 'flex';
+}
+
+async function startUpgrade() {
+  if (!authToken) {
+    document.getElementById('paywallModal').style.display = 'none';
+    showAuthModal();
+    setAuthMode('signup');
+    return;
+  }
+
+  try {
+    const res = await fetch(API + '/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Checkout failed');
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert('Stripe checkout is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID environment variables.');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+async function openStripePortal() {
+  try {
+    const res = await fetch(API + '/api/stripe/portal', {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Portal failed');
+    if (data.url) window.location.href = data.url;
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// Check for upgrade=true in hash params (returned from Stripe)
+if (location.hash.includes('upgraded=true') && authToken) {
+  fetch(API + '/api/auth/me', { headers: authHeaders() })
+    .then(r => r.json())
+    .then(data => {
+      if (data.user) { authUser = data.user; updateAuthUI(); }
+    })
+    .catch(() => {});
+}
+
+// ─── Analytics: trackEvent ─────────────────────────────────────────────────
+function trackEvent(eventType, eventData) {
+  try {
+    fetch(API + '/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventType, eventData }),
+    }).catch(() => {}); // fire-and-forget
+  } catch { /* ignore */ }
+}
+
+// ─── Admin Analytics Dashboard ────────────────────────────────────────────
+async function loadAdminDashboard() {
+  const gate = document.getElementById('adminAuthGate');
+  const dash = document.getElementById('adminDashboard');
+  if (!authToken || !authUser) {
+    gate.style.display = '';
+    dash.style.display = 'none';
+    return;
+  }
+  try {
+    const res = await fetch(API + '/api/analytics/dashboard', { headers: authHeaders() });
+    if (!res.ok) {
+      gate.style.display = '';
+      gate.innerHTML = '<p>Access denied. Admin privileges required.</p>';
+      dash.style.display = 'none';
+      return;
+    }
+    const data = await res.json();
+    gate.style.display = 'none';
+    dash.style.display = '';
+
+    document.getElementById('adminTotalAudits').textContent = data.audits?.total ?? '—';
+    document.getElementById('adminAudits7d').textContent = data.audits?.last7Days ?? '—';
+    document.getElementById('adminAvgSavings').textContent = data.audits?.avgSavings != null ? '$' + data.audits.avgSavings : '—';
+    document.getElementById('adminSignups').textContent = data.signups ?? '—';
+    document.getElementById('adminUpgrades').textContent = data.upgrades ?? '—';
+    document.getElementById('adminAvgBill').textContent = data.audits?.avgBillSize != null ? '$' + data.audits.avgBillSize : '—';
+
+    // Page views table
+    const pvBody = document.querySelector('#adminPageViews7d tbody');
+    pvBody.innerHTML = '';
+    (data.pageViews?.last7Days || []).forEach(r => {
+      pvBody.innerHTML += `<tr><td>${r.page || 'unknown'}</td><td>${r.views}</td></tr>`;
+    });
+
+    // Feature usage table
+    const fuBody = document.querySelector('#adminFeatureUsage tbody');
+    fuBody.innerHTML = '';
+    (data.featureUsage || []).forEach(r => {
+      fuBody.innerHTML += `<tr><td>${r.feature || 'unknown'}</td><td>${r.uses}</td></tr>`;
+    });
+
+    // Daily trend table
+    const dtBody = document.querySelector('#adminDailyTrend tbody');
+    dtBody.innerHTML = '';
+    (data.dailyAuditTrend || []).forEach(r => {
+      dtBody.innerHTML += `<tr><td>${r.day}</td><td>${r.count}</td></tr>`;
+    });
+  } catch (err) {
+    gate.style.display = '';
+    gate.innerHTML = '<p>Failed to load analytics. Please try again.</p>';
+    dash.style.display = 'none';
+  }
+}
+
+// ─── Email opt-in visibility (show when logged in) ────────────────────────
+function updateEmailOptIn() {
+  const row = document.getElementById('emailOptInRow');
+  if (row) row.style.display = authToken ? 'flex' : 'none';
+}
+
+// Make functions available globally for onclick handlers
+window.showAuthModal = showAuthModal;
+window.hideAuthModal = hideAuthModal;
+window.toggleAuthMode = toggleAuthMode;
+window.showForgotPassword = showForgotPassword;
+window.showPaywallModal = showPaywallModal;
+window.startUpgrade = startUpgrade;
+window.openStripePortal = openStripePortal;
+window.logout = logout;
+window.trackEvent = trackEvent;
+
+// Initialize auth UI
+updateAuthUI();
+updateEmailOptIn();
 </script>
 </body>
 </html>

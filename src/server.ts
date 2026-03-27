@@ -27,10 +27,139 @@ import type { ExtractedEobData } from './parser/eob-ocr-extractor.js';
 import { findHospitalMRF, listHospitalMRFs } from './collector/hospital-mrf-finder.js';
 import { parseHospitalPriceFile } from './collector/hospital-price-parser.js';
 import { importHospitalPrices } from './collector/hospital-price-importer.js';
+import { createToken, verifyToken } from './utils/jwt.js';
+import { hashPassword, verifyPassword } from './utils/auth.js';
+import { sendEmail, welcomeEmail, auditSummaryEmail, upgradeConfirmationEmail, passwordResetEmail, auditResultsEmail } from './utils/email.js';
+import { createCheckoutSession, createPortalSession, verifyWebhookSignature, isStripeConfigured } from './stripe.js';
+import { hash as blake3Hash } from './utils/hash.js';
+import { logEvent, checkAnalyticsRateLimit, isAdmin, getAnalyticsDashboard } from './analytics.js';
+import { getAllEstimates } from './integrations/insurance-apis.js';
+import { autoFetchHospitalPrices } from './collector/hospital-mrf-finder.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const WEB_DIR = path.resolve(process.cwd(), 'web');
 const UPLOAD_LIMIT = 10 * 1024 * 1024; // 10MB
+
+// ─── Free-tier IP tracking (in-memory, privacy-first — not persisted) ───────
+const ipAuditCounts = new Map<string, { count: number; month: string }>();
+const FREE_AUDITS_PER_MONTH = 2;
+
+function getCurrentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getClientIp(req: http.IncomingMessage): string {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string') return xff.split(',')[0].trim();
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+/** Extract authenticated user from JWT Bearer token, or null. */
+async function getAuthUser(req: http.IncomingMessage): Promise<{
+  id: number; email: string; plan: string;
+  audits_this_month: number; month_reset: string | null;
+  stripe_customer_id: string | null; stripe_subscription_id: string | null;
+} | null> {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  const payload = verifyToken(token);
+  if (!payload || !payload.userId) return null;
+
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: 'SELECT * FROM users WHERE id = ?',
+      args: [payload.userId as number],
+    });
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0] as unknown as {
+      id: number; email: string; plan: string;
+      audits_this_month: number; month_reset: string | null;
+      stripe_customer_id: string | null; stripe_subscription_id: string | null;
+    };
+    return row;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check audit rate limit. Returns null if allowed, or an error response object if blocked.
+ * Also increments the counter.
+ */
+async function checkAuditLimit(req: http.IncomingMessage): Promise<{
+  allowed: boolean;
+  premium: boolean;
+  userId: number | null;
+  error?: string;
+  upgradeUrl?: string;
+}> {
+  const user = await getAuthUser(req);
+  const month = getCurrentMonth();
+
+  if (user) {
+    // Reset monthly counter if month changed
+    if (user.month_reset !== month) {
+      const db = getDb();
+      await db.execute({
+        sql: 'UPDATE users SET audits_this_month = 0, month_reset = ? WHERE id = ?',
+        args: [month, user.id],
+      });
+      user.audits_this_month = 0;
+    }
+
+    if (user.plan === 'premium') {
+      // Premium: unlimited, always increment
+      const db = getDb();
+      await db.execute({
+        sql: 'UPDATE users SET audits_this_month = audits_this_month + 1 WHERE id = ?',
+        args: [user.id],
+      });
+      return { allowed: true, premium: true, userId: user.id };
+    }
+
+    // Free user
+    if (user.audits_this_month >= FREE_AUDITS_PER_MONTH) {
+      return {
+        allowed: false,
+        premium: false,
+        userId: user.id,
+        error: 'Free limit reached. You have used your 2 free audits this month.',
+        upgradeUrl: '/api/stripe/checkout',
+      };
+    }
+
+    // Increment
+    const db = getDb();
+    await db.execute({
+      sql: 'UPDATE users SET audits_this_month = audits_this_month + 1, month_reset = ? WHERE id = ?',
+      args: [month, user.id],
+    });
+    return { allowed: true, premium: false, userId: user.id };
+  }
+
+  // Unauthenticated: track by IP
+  const ip = getClientIp(req);
+  const entry = ipAuditCounts.get(ip);
+  if (entry && entry.month === month) {
+    if (entry.count >= FREE_AUDITS_PER_MONTH) {
+      return {
+        allowed: false,
+        premium: false,
+        userId: null,
+        error: 'Free limit reached. Sign up and upgrade to Premium for unlimited audits.',
+        upgradeUrl: '/api/stripe/checkout',
+      };
+    }
+    entry.count++;
+  } else {
+    ipAuditCounts.set(ip, { count: 1, month });
+  }
+
+  return { allowed: true, premium: false, userId: null };
+}
 
 // ─── MIME types for static files ────────────────────────────────────────────
 const MIME: Record<string, string> = {
@@ -53,7 +182,7 @@ function sendJson(res: http.ServerResponse, status: number, data: unknown) {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Length': Buffer.byteLength(body),
     // Privacy: prevent caching of any response containing user data
     'Cache-Control': 'no-store, no-cache, must-revalidate, private',
@@ -317,6 +446,17 @@ async function handleAuditFile(
   url: string
 ) {
   const params = parseQueryParams(url);
+
+  // ── Paywall check ────────────────────────────────────────────────────────
+  const limit = await checkAuditLimit(req);
+  if (!limit.allowed) {
+    return sendJson(res, 403, {
+      error: limit.error,
+      upgradeUrl: limit.upgradeUrl,
+      paywalled: true,
+    });
+  }
+
   let tmpPath: string | null = null;
 
   try {
@@ -578,6 +718,10 @@ async function handleAuditFile(
       console.error('[server] Savings summary failed:', err);
     }
 
+    // Add premium flag for frontend feature gating
+    response.premium = limit.premium;
+    response.userId = limit.userId;
+
     sendJson(res, 200, response);
   } catch (err) {
     const msg = (err as Error).message;
@@ -597,6 +741,17 @@ async function handleAuditJson(
   url: string
 ) {
   const params = parseQueryParams(url);
+
+  // ── Paywall check ────────────────────────────────────────────────────────
+  const limit = await checkAuditLimit(req);
+  if (!limit.allowed) {
+    return sendJson(res, 403, {
+      error: limit.error,
+      upgradeUrl: limit.upgradeUrl,
+      paywalled: true,
+    });
+  }
+
   let tmpPath: string | null = null;
 
   try {
@@ -731,6 +886,10 @@ async function handleAuditJson(
       console.error('[server] Savings summary failed:', err);
     }
 
+    // Add premium flag for frontend feature gating
+    response.premium = limit.premium;
+    response.userId = limit.userId;
+
     sendJson(res, 200, response);
   } catch (err) {
     const msg = (err as Error).message;
@@ -851,6 +1010,12 @@ async function handleAppeal(
   req: http.IncomingMessage,
   res: http.ServerResponse
 ) {
+  // Premium feature gate
+  const user = await getAuthUser(req);
+  if (!user || user.plan !== 'premium') {
+    return sendJson(res, 403, { error: 'Appeal letters require a Premium subscription.', paywalled: true, upgradeUrl: '/api/stripe/checkout' });
+  }
+
   try {
     let body: Buffer;
     try {
@@ -887,6 +1052,12 @@ async function handleDisputeLetter(
   req: http.IncomingMessage,
   res: http.ServerResponse
 ) {
+  // Premium feature gate
+  const user = await getAuthUser(req);
+  if (!user || user.plan !== 'premium') {
+    return sendJson(res, 403, { error: 'Dispute letters require a Premium subscription.', paywalled: true, upgradeUrl: '/api/stripe/checkout' });
+  }
+
   let tmpPath: string | null = null;
   try {
     let body: Buffer;
@@ -1264,6 +1435,480 @@ async function handleGetCommunityPrices(
   }
 }
 
+// ─── Auth handlers ───────────────────────────────────────────────────────────
+
+async function handleSignup(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  let body: Buffer;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendError(res, 413, (err as Error).message);
+  }
+
+  let parsed: { email?: string; password?: string };
+  try {
+    parsed = JSON.parse(body.toString('utf-8'));
+  } catch {
+    return sendError(res, 400, 'Invalid JSON body');
+  }
+
+  const { email, password } = parsed;
+  if (!email || !password) {
+    return sendError(res, 400, 'email and password are required');
+  }
+
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return sendError(res, 400, 'Invalid email format');
+  }
+
+  // Validate password length
+  if (password.length < 8) {
+    return sendError(res, 400, 'Password must be at least 8 characters');
+  }
+
+  try {
+    const db = getDb();
+
+    // Check if email already exists
+    const existing = await db.execute({
+      sql: 'SELECT id FROM users WHERE email = ?',
+      args: [email.toLowerCase()],
+    });
+    if (existing.rows.length > 0) {
+      return sendError(res, 409, 'An account with this email already exists');
+    }
+
+    const passwordHash = hashPassword(password);
+    const month = getCurrentMonth();
+
+    await db.execute({
+      sql: `INSERT INTO users (id, email, password_hash, plan, audits_this_month, month_reset, created_at)
+            VALUES (?, ?, ?, 'free', 0, ?, datetime('now'))`,
+      args: [randomUUID(), email.toLowerCase(), passwordHash, month],
+    });
+
+    // Get the inserted user
+    const result = await db.execute({
+      sql: 'SELECT id, email, plan FROM users WHERE email = ?',
+      args: [email.toLowerCase()],
+    });
+    const user = result.rows[0] as unknown as { id: number; email: string; plan: string };
+
+    const token = createToken({ userId: user.id, email: user.email });
+
+    // Send welcome email (non-blocking)
+    sendEmail(welcomeEmail(user.email)).catch(err => {
+      console.error('[email] Welcome email failed:', err);
+    });
+
+    sendJson(res, 201, {
+      token,
+      user: { id: user.id, email: user.email, plan: user.plan },
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleLogin(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  let body: Buffer;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendError(res, 413, (err as Error).message);
+  }
+
+  let parsed: { email?: string; password?: string };
+  try {
+    parsed = JSON.parse(body.toString('utf-8'));
+  } catch {
+    return sendError(res, 400, 'Invalid JSON body');
+  }
+
+  const { email, password } = parsed;
+  if (!email || !password) {
+    return sendError(res, 400, 'email and password are required');
+  }
+
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: 'SELECT * FROM users WHERE email = ?',
+      args: [email.toLowerCase()],
+    });
+
+    if (result.rows.length === 0) {
+      return sendError(res, 401, 'Invalid email or password');
+    }
+
+    const user = result.rows[0] as unknown as {
+      id: number; email: string; plan: string;
+      password_hash: string; audits_this_month: number;
+      stripe_customer_id: string | null;
+    };
+
+    if (!user.password_hash || !verifyPassword(password, user.password_hash)) {
+      return sendError(res, 401, 'Invalid email or password');
+    }
+
+    // Update last_login
+    await db.execute({
+      sql: "UPDATE users SET last_login = datetime('now') WHERE id = ?",
+      args: [user.id],
+    });
+
+    const token = createToken({ userId: user.id, email: user.email });
+
+    sendJson(res, 200, {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        plan: user.plan,
+        auditsThisMonth: user.audits_this_month,
+        hasStripe: !!user.stripe_customer_id,
+      },
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleAuthMe(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return sendError(res, 401, 'Not authenticated');
+  }
+
+  sendJson(res, 200, {
+    user: {
+      id: user.id,
+      email: user.email,
+      plan: user.plan,
+      auditsThisMonth: user.audits_this_month,
+      monthReset: user.month_reset,
+      hasStripe: !!user.stripe_customer_id,
+    },
+  });
+}
+
+async function handleForgotPassword(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  let body: Buffer;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendError(res, 413, (err as Error).message);
+  }
+
+  let parsed: { email?: string };
+  try {
+    parsed = JSON.parse(body.toString('utf-8'));
+  } catch {
+    return sendError(res, 400, 'Invalid JSON body');
+  }
+
+  if (!parsed.email) {
+    return sendError(res, 400, 'email is required');
+  }
+
+  try {
+    const db = getDb();
+    const result = await db.execute({
+      sql: 'SELECT id, email FROM users WHERE email = ?',
+      args: [parsed.email.toLowerCase()],
+    });
+
+    // Always return success (don't leak whether email exists)
+    if (result.rows.length === 0) {
+      return sendJson(res, 200, { sent: true });
+    }
+
+    const user = result.rows[0] as unknown as { id: number; email: string };
+
+    // Generate reset token
+    const rawToken = randomUUID();
+    const tokenHash = await blake3Hash(rawToken);
+    const expiresAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+
+    await db.execute({
+      sql: `INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)`,
+      args: [user.id, tokenHash, expiresAt],
+    });
+
+    // Send reset email (non-blocking)
+    sendEmail(passwordResetEmail(user.email, rawToken)).catch(err => {
+      console.error('[email] Password reset email failed:', err);
+    });
+
+    sendJson(res, 200, { sent: true });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleResetPassword(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  let body: Buffer;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendError(res, 413, (err as Error).message);
+  }
+
+  let parsed: { token?: string; password?: string };
+  try {
+    parsed = JSON.parse(body.toString('utf-8'));
+  } catch {
+    return sendError(res, 400, 'Invalid JSON body');
+  }
+
+  if (!parsed.token || !parsed.password) {
+    return sendError(res, 400, 'token and password are required');
+  }
+
+  if (parsed.password.length < 8) {
+    return sendError(res, 400, 'Password must be at least 8 characters');
+  }
+
+  try {
+    const db = getDb();
+    const tokenHash = await blake3Hash(parsed.token);
+
+    const result = await db.execute({
+      sql: `SELECT * FROM password_resets
+            WHERE token_hash = ? AND used = 0 AND expires_at > datetime('now')
+            ORDER BY created_at DESC LIMIT 1`,
+      args: [tokenHash],
+    });
+
+    if (result.rows.length === 0) {
+      return sendError(res, 400, 'Invalid or expired reset token');
+    }
+
+    const reset = result.rows[0] as unknown as { id: number; user_id: number };
+    const newHash = hashPassword(parsed.password);
+
+    await db.execute({
+      sql: 'UPDATE users SET password_hash = ? WHERE id = ?',
+      args: [newHash, reset.user_id],
+    });
+
+    await db.execute({
+      sql: 'UPDATE password_resets SET used = 1 WHERE id = ?',
+      args: [reset.id],
+    });
+
+    sendJson(res, 200, { success: true });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+// ─── Stripe handlers ─────────────────────────────────────────────────────────
+
+async function handleStripeCheckout(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return sendError(res, 401, 'Authentication required');
+  }
+
+  if (!isStripeConfigured()) {
+    return sendError(res, 503, 'Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID environment variables.');
+  }
+
+  try {
+    const session = await createCheckoutSession(
+      user.id,
+      user.email,
+      user.stripe_customer_id || undefined,
+    );
+    sendJson(res, 200, { url: session.url, sessionId: session.sessionId });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleStripeWebhook(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  let body: Buffer;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendError(res, 413, (err as Error).message);
+  }
+
+  const sigHeader = req.headers['stripe-signature'] as string || '';
+  const event = verifyWebhookSignature(body.toString('utf-8'), sigHeader);
+
+  if (!event) {
+    return sendError(res, 400, 'Invalid webhook signature');
+  }
+
+  const type = event.type as string;
+  const data = event.data as Record<string, unknown>;
+  const obj = data.object as Record<string, unknown>;
+
+  try {
+    const db = getDb();
+
+    if (type === 'checkout.session.completed') {
+      const userId = (obj.metadata as Record<string, string>)?.user_id || obj.client_reference_id as string;
+      const customerId = obj.customer as string;
+      const subscriptionId = obj.subscription as string;
+
+      if (userId) {
+        await db.execute({
+          sql: `UPDATE users SET plan = 'premium', stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?`,
+          args: [customerId, subscriptionId, userId],
+        });
+
+        // Send upgrade confirmation email (non-blocking)
+        const userResult = await db.execute({ sql: 'SELECT email FROM users WHERE id = ?', args: [userId] });
+        if (userResult.rows.length > 0) {
+          const email = (userResult.rows[0] as unknown as { email: string }).email;
+          sendEmail(upgradeConfirmationEmail(email)).catch(err => {
+            console.error('[email] Upgrade email failed:', err);
+          });
+        }
+      }
+    }
+
+    if (type === 'customer.subscription.deleted') {
+      const customerId = obj.customer as string;
+      if (customerId) {
+        await db.execute({
+          sql: `UPDATE users SET plan = 'free', stripe_subscription_id = NULL WHERE stripe_customer_id = ?`,
+          args: [customerId],
+        });
+      }
+    }
+
+    sendJson(res, 200, { received: true });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+async function handleStripePortal(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return sendError(res, 401, 'Authentication required');
+  }
+
+  if (!user.stripe_customer_id) {
+    return sendError(res, 400, 'No active subscription');
+  }
+
+  try {
+    const session = await createPortalSession(user.stripe_customer_id);
+    sendJson(res, 200, { url: session.url });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
+// ─── Analytics handlers ──────────────────────────────────────────────────────
+
+async function handleAnalyticsEvent(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  const ip = getClientIp(req);
+  if (!checkAnalyticsRateLimit(ip)) {
+    return sendError(res, 429, 'Rate limit exceeded');
+  }
+
+  const body = await readBody(req);
+  const data = JSON.parse(body);
+  const { eventType, eventData } = data;
+
+  if (!eventType || typeof eventType !== 'string') {
+    return sendError(res, 400, 'eventType is required');
+  }
+
+  // Sanitize: only allow known event types
+  const allowedTypes = ['page_view', 'audit', 'download', 'signup', 'upgrade', 'feature_use'];
+  if (!allowedTypes.includes(eventType)) {
+    return sendError(res, 400, 'Invalid event type');
+  }
+
+  await logEvent(eventType, eventData || {});
+  return sendJson(res, 200, { ok: true });
+}
+
+async function handleAnalyticsDashboard(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  const user = await getAuthUser(req);
+  if (!user || !isAdmin(user.email)) {
+    return sendError(res, 403, 'Admin access required');
+  }
+
+  const dashboard = await getAnalyticsDashboard();
+  return sendJson(res, 200, dashboard);
+}
+
+// ─── Insurance estimate handler ─────────────────────────────────────────────
+
+async function handleInsuranceEstimates(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  rawUrl: string,
+) {
+  const params = new URLSearchParams(rawUrl.split('?')[1] || '');
+  const code = params.get('code');
+  const zip = params.get('zip');
+
+  if (!code) {
+    return sendError(res, 400, 'code parameter is required');
+  }
+
+  const estimates = await getAllEstimates(code, zip || '');
+  return sendJson(res, 200, { estimates, note: 'Insurance cost estimates are in development. Check back soon for live data.' });
+}
+
+// ─── Hospital MRF auto-fetch handler ────────────────────────────────────────
+
+async function handleHospitalMrfAutoFetch(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  const body = await readBody(req);
+  const data = JSON.parse(body);
+  const { hospitalName, state } = data;
+
+  if (!hospitalName || typeof hospitalName !== 'string') {
+    return sendError(res, 400, 'hospitalName is required');
+  }
+
+  const result = await autoFetchHospitalPrices(hospitalName, { state });
+  return sendJson(res, 200, result || { found: false });
+}
+
 // ─── Main request router ──────────────────────────────────────────────────────
 
 async function requestHandler(
@@ -1279,7 +1924,7 @@ async function requestHandler(
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     });
     res.end();
     return;
@@ -1358,6 +2003,47 @@ async function requestHandler(
         dataStored: ['CMS Medicare rates (public government data)', 'Hospital price transparency data (public government data)', 'Community-submitted anonymous price reports (no PII)'],
         dataNotStored: ['Your medical bills', 'Your EOBs', 'Your name or personal information', 'Your insurance details', 'Audit results or reports'],
       });
+    }
+    // Auth routes
+    if (method === 'POST' && pathname === '/api/auth/signup') {
+      return handleSignup(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/auth/login') {
+      return handleLogin(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/auth/me') {
+      return handleAuthMe(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/auth/forgot-password') {
+      return handleForgotPassword(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/auth/reset-password') {
+      return handleResetPassword(req, res);
+    }
+    // Stripe routes
+    if (method === 'POST' && pathname === '/api/stripe/checkout') {
+      return handleStripeCheckout(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/stripe/webhook') {
+      return handleStripeWebhook(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/stripe/portal') {
+      return handleStripePortal(req, res);
+    }
+    // Analytics routes
+    if (method === 'POST' && pathname === '/api/analytics/event') {
+      return handleAnalyticsEvent(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/analytics/dashboard') {
+      return handleAnalyticsDashboard(req, res);
+    }
+    // Insurance estimate route
+    if (method === 'GET' && pathname === '/api/insurance-estimates') {
+      return handleInsuranceEstimates(req, res, url);
+    }
+    // Hospital MRF auto-fetch route
+    if (method === 'POST' && pathname === '/api/hospital-mrf/auto-fetch') {
+      return handleHospitalMrfAutoFetch(req, res);
     }
     return sendError(res, 404, `API endpoint not found: ${method} ${pathname}`);
   }
