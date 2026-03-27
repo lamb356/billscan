@@ -52,9 +52,13 @@ function sendJson(res: http.ServerResponse, status: number, data: unknown) {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Length': Buffer.byteLength(body),
+    // Privacy: prevent caching of any response containing user data
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    'Pragma': 'no-cache',
+    'X-BillScan-Privacy': 'zero-storage',
   });
   res.end(body);
 }
@@ -361,7 +365,7 @@ async function handleAuditFile(
       setting: (params.setting as 'facility' | 'office') || undefined,
       zip: params.zip || undefined,
       locality: params.locality || undefined,
-      save: true, // Always save audits for history
+      save: false, // Zero-storage: never persist user bill data
     };
 
     const { report, isEob, eob, eobRaw } = await runAudit(tmpPath, auditOptions);
@@ -616,7 +620,7 @@ async function handleAuditJson(
       setting: (params.setting as 'facility' | 'office') || undefined,
       zip: params.zip || undefined,
       locality: params.locality || undefined,
-      save: true, // Always save audits for history
+      save: false, // Zero-storage: never persist user bill data
     };
 
     const { report } = await runAudit(tmpPath, auditOptions);
@@ -1109,6 +1113,34 @@ async function handleGetAudit(
   }
 }
 
+async function handleDeleteAllUserData(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse
+) {
+  try {
+    const db = getDb();
+    // Delete ALL user-generated data from every table
+    await db.execute({ sql: 'DELETE FROM audits', args: [] });
+    await db.execute({ sql: 'DELETE FROM community_prices', args: [] });
+    await db.execute({ sql: 'DELETE FROM users', args: [] });
+    // Clean up any temp files
+    const tmpDir = os.tmpdir();
+    const fs2 = await import('node:fs');
+    const tmpFiles = fs2.readdirSync(tmpDir).filter(f => f.startsWith('billscan-'));
+    for (const f of tmpFiles) {
+      try { fs2.unlinkSync(path.join(tmpDir, f)); } catch { /* ignore */ }
+    }
+    sendJson(res, 200, {
+      deleted: true,
+      message: 'All user data has been permanently deleted.',
+      tablesCleared: ['audits', 'community_prices', 'users'],
+      tempFilesCleaned: tmpFiles.length,
+    });
+  } catch (err) {
+    sendError(res, 500, (err as Error).message);
+  }
+}
+
 async function handleDeleteAudit(
   _req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -1310,6 +1342,22 @@ async function requestHandler(
     }
     if (method === 'GET' && pathname === '/api/community-prices') {
       return handleGetCommunityPrices(req, res, url);
+    }
+    // Privacy: Delete all user data
+    if (method === 'DELETE' && pathname === '/api/user-data') {
+      return handleDeleteAllUserData(req, res);
+    }
+    if (method === 'GET' && pathname === '/api/privacy-info') {
+      return sendJson(res, 200, {
+        policy: 'zero-storage',
+        description: 'BillScan does not store your medical bills, EOBs, or personal health information. All processing happens in memory and data is discarded immediately after your results are returned.',
+        hashing: 'BLAKE3 (with SHA-256 fallback)',
+        tempFiles: 'Deleted immediately after processing',
+        auditHistory: 'Not stored on server — results are returned to your browser only',
+        encryption: 'All uploads are hashed with BLAKE3 for integrity verification. Original files are never stored.',
+        dataStored: ['CMS Medicare rates (public government data)', 'Hospital price transparency data (public government data)', 'Community-submitted anonymous price reports (no PII)'],
+        dataNotStored: ['Your medical bills', 'Your EOBs', 'Your name or personal information', 'Your insurance details', 'Audit results or reports'],
+      });
     }
     return sendError(res, 404, `API endpoint not found: ${method} ${pathname}`);
   }

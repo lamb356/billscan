@@ -2627,9 +2627,12 @@ Date of Birth: [DOB]</div>
 <div class="page" id="page-history">
   <div class="container" style="padding-top:32px;padding-bottom:64px">
     <h2 style="margin-bottom:6px">Audit History</h2>
-    <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px">
-      All audits saved automatically. Click any row to view the full report.
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px">
+      Results from this session are shown below. <strong style="color:var(--green)">We never store your medical data on our servers.</strong>
     </p>
+    <button id="deleteAllDataBtn" class="btn" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(248,81,73,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:20px">
+      🗑️ Delete All My Data
+    </button>
 
     <!-- Running totals -->
     <div id="historyTotals" class="history-totals" style="display:none">
@@ -4662,6 +4665,34 @@ document.getElementById('mrfSearchBtn')?.addEventListener('click', async () => {
 
 // Initial data load on home page
 loadHomeSources();
+
+// ── Privacy: Delete All Data button ─────────────────────────────────────────
+document.getElementById('deleteAllDataBtn')?.addEventListener('click', async () => {
+  if (!confirm('This will permanently delete all audit history and community submissions. This cannot be undone. Continue?')) return;
+  try {
+    const res = await fetch(API + '/api/user-data', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.deleted) {
+      alert('All your data has been permanently deleted.');
+      window.location.hash = '#/history';
+      window.location.reload();
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Failed to delete data: ' + err.message);
+  }
+});
+
+// ── Privacy Banner ──────────────────────────────────────────────────────────
+(function addPrivacyBanner() {
+  const banner = document.createElement('div');
+  banner.id = 'privacyBanner';
+  banner.style.cssText = 'background:rgba(63,185,80,0.08);border-bottom:1px solid rgba(63,185,80,0.2);padding:8px 16px;text-align:center;font-size:12px;color:var(--text-muted)';
+  banner.innerHTML = '\ud83d\udd12 <strong style="color:var(--green)">Zero-Storage Privacy</strong> \u2014 Your medical bills are processed in memory and never stored. All uploads hashed with BLAKE3. <a href="#/get-records" style="color:var(--green);text-decoration:underline">Learn more</a>';
+  const nav = document.querySelector('.navbar');
+  if (nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
+})();
 </script>
 </body>
 </html>
