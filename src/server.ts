@@ -1351,7 +1351,7 @@ async function requestHandler(
       return sendJson(res, 200, {
         policy: 'zero-storage',
         description: 'BillScan does not store your medical bills, EOBs, or personal health information. All processing happens in memory and data is discarded immediately after your results are returned.',
-        hashing: 'BLAKE3 (with SHA-256 fallback)',
+        hashing: 'BLAKE3 only (@noble/hashes — audited, zero-dependency)',
         tempFiles: 'Deleted immediately after processing',
         auditHistory: 'Not stored on server — results are returned to your browser only',
         encryption: 'All uploads are hashed with BLAKE3 for integrity verification. Original files are never stored.',
